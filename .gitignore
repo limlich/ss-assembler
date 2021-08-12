@@ -1,0 +1,5 @@
+/.vscode/
+/build/
+/TODO
+*.pdf
+*.o
