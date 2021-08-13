@@ -35,3 +35,48 @@ void Assembler::locationAddLines(yy::location::counter_type count)
 {
     location_.lines(count);
 }
+
+void Assembler::instr(const std::string& instr)
+{
+}
+void Assembler::instrArgImmedLit(unsigned long lit)
+{
+}
+void Assembler::instrArgImmedSym(const std::string& sym)
+{
+}
+void Assembler::instrArgMemDirOrJmpImmedLit(unsigned long lit, bool jmp)
+{
+}
+void Assembler::instrArgMemDirOrJmpImmedSym(const std::string& sym, bool jmp)
+{
+}
+void Assembler::instrArgPCRel(const std::string& sym)
+{
+}
+void Assembler::instrArgRegDir(const std::string& reg, bool jmp)
+{
+}
+void Assembler::instrArgRegInd(const std::string& reg, bool jmp)
+{
+}
+void Assembler::instrArgRegIndLit(const std::string& reg, unsigned long lit, bool jmp)
+{
+}
+void Assembler::instrArgRegIndSym(const std::string& reg, const std::string& sym, bool jmp)
+{
+}
+
+void Assembler::dir(const std::string& dir)
+{
+}
+void Assembler::dirArgLit(unsigned long lit)
+{
+}
+void Assembler::dirArgSym(const std::string& sym)
+{
+}
+
+void Assembler::label(const std::string& label)
+{
+}

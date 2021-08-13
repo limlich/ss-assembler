@@ -220,10 +220,12 @@ namespace yy {
       case symbol_kind::TOKEN_INT_10: // INT_10
       case symbol_kind::TOKEN_INT_16: // INT_16
       case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_dir_arg: // dir_arg
-      case symbol_kind::TOKEN_literal: // literal
       case symbol_kind::TOKEN_label: // label
         value.YY_MOVE_OR_COPY< std::string > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::TOKEN_literal: // literal
+        value.YY_MOVE_OR_COPY< unsigned long > (YY_MOVE (that.value));
         break;
 
       default:
@@ -245,10 +247,12 @@ namespace yy {
       case symbol_kind::TOKEN_INT_10: // INT_10
       case symbol_kind::TOKEN_INT_16: // INT_16
       case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_dir_arg: // dir_arg
-      case symbol_kind::TOKEN_literal: // literal
       case symbol_kind::TOKEN_label: // label
         value.move< std::string > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::TOKEN_literal: // literal
+        value.move< unsigned long > (YY_MOVE (that.value));
         break;
 
       default:
@@ -270,10 +274,12 @@ namespace yy {
       case symbol_kind::TOKEN_INT_10: // INT_10
       case symbol_kind::TOKEN_INT_16: // INT_16
       case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_dir_arg: // dir_arg
-      case symbol_kind::TOKEN_literal: // literal
       case symbol_kind::TOKEN_label: // label
         value.copy< std::string > (that.value);
+        break;
+
+      case symbol_kind::TOKEN_literal: // literal
+        value.copy< unsigned long > (that.value);
         break;
 
       default:
@@ -294,10 +300,12 @@ namespace yy {
       case symbol_kind::TOKEN_INT_10: // INT_10
       case symbol_kind::TOKEN_INT_16: // INT_16
       case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_dir_arg: // dir_arg
-      case symbol_kind::TOKEN_literal: // literal
       case symbol_kind::TOKEN_label: // label
         value.move< std::string > (that.value);
+        break;
+
+      case symbol_kind::TOKEN_literal: // literal
+        value.move< unsigned long > (that.value);
         break;
 
       default:
@@ -573,10 +581,12 @@ namespace yy {
       case symbol_kind::TOKEN_INT_10: // INT_10
       case symbol_kind::TOKEN_INT_16: // INT_16
       case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_dir_arg: // dir_arg
-      case symbol_kind::TOKEN_literal: // literal
       case symbol_kind::TOKEN_label: // label
         yylhs.value.emplace< std::string > ();
+        break;
+
+      case symbol_kind::TOKEN_literal: // literal
+        yylhs.value.emplace< unsigned long > ();
         break;
 
       default:
@@ -599,38 +609,158 @@ namespace yy {
         {
           switch (yyn)
             {
-  case 32: // dir_arg: IDENT
+  case 10: // instr: IDENT
+#line 60 "parser.y"
+             { assembler.instr(yystack_[0].value.as < std::string > ()); }
+#line 616 "src/parser.cpp"
+    break;
+
+  case 11: // instr: IDENT instr_arg
+#line 61 "parser.y"
+                       { assembler.instr(yystack_[1].value.as < std::string > ()); }
+#line 622 "src/parser.cpp"
+    break;
+
+  case 12: // instr: IDENT instr_arg COMMA instr_arg
+#line 62 "parser.y"
+                                       { assembler.instr(yystack_[3].value.as < std::string > ()); }
+#line 628 "src/parser.cpp"
+    break;
+
+  case 13: // instr_arg: DOLLAR literal
+#line 65 "parser.y"
+           { assembler.instrArgImmedLit(yystack_[0].value.as < unsigned long > ()); }
+#line 634 "src/parser.cpp"
+    break;
+
+  case 14: // instr_arg: DOLLAR IDENT
+#line 67 "parser.y"
+           { assembler.instrArgImmedSym(yystack_[0].value.as < std::string > ()); }
+#line 640 "src/parser.cpp"
+    break;
+
+  case 15: // instr_arg: literal
+#line 69 "parser.y"
+           { assembler.instrArgMemDirOrJmpImmedLit(yystack_[0].value.as < unsigned long > ()); }
+#line 646 "src/parser.cpp"
+    break;
+
+  case 16: // instr_arg: IDENT
+#line 71 "parser.y"
+           { assembler.instrArgMemDirOrJmpImmedSym(yystack_[0].value.as < std::string > ()); }
+#line 652 "src/parser.cpp"
+    break;
+
+  case 17: // instr_arg: PERCENT IDENT
+#line 73 "parser.y"
+           { assembler.instrArgPCRel(yystack_[0].value.as < std::string > ()); }
+#line 658 "src/parser.cpp"
+    break;
+
+  case 18: // instr_arg: REG
+#line 75 "parser.y"
+           { assembler.instrArgRegDir(yystack_[0].value.as < std::string > ()); }
+#line 664 "src/parser.cpp"
+    break;
+
+  case 19: // instr_arg: SBR_OPEN REG SBR_CLOSE
+#line 77 "parser.y"
+           { assembler.instrArgRegInd(yystack_[1].value.as < std::string > ()); }
+#line 670 "src/parser.cpp"
+    break;
+
+  case 20: // instr_arg: SBR_OPEN REG PLUS literal SBR_CLOSE
+#line 79 "parser.y"
+           { assembler.instrArgRegIndLit(yystack_[3].value.as < std::string > (), yystack_[1].value.as < unsigned long > ()); }
+#line 676 "src/parser.cpp"
+    break;
+
+  case 21: // instr_arg: SBR_OPEN REG PLUS IDENT SBR_CLOSE
+#line 81 "parser.y"
+           { assembler.instrArgRegIndSym(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > ()); }
+#line 682 "src/parser.cpp"
+    break;
+
+  case 22: // instr_arg: MUL literal
+#line 83 "parser.y"
+           { assembler.instrArgMemDirOrJmpImmedLit(yystack_[0].value.as < unsigned long > (), true); }
+#line 688 "src/parser.cpp"
+    break;
+
+  case 23: // instr_arg: MUL IDENT
+#line 85 "parser.y"
+           { assembler.instrArgMemDirOrJmpImmedSym(yystack_[0].value.as < std::string > (), true); }
+#line 694 "src/parser.cpp"
+    break;
+
+  case 24: // instr_arg: MUL REG
 #line 87 "parser.y"
-               { yylhs.value.as < std::string > () = yystack_[0].value.as < std::string > (); }
-#line 606 "src/parser.cpp"
+           { assembler.instrArgRegDir(yystack_[0].value.as < std::string > (), true); }
+#line 700 "src/parser.cpp"
+    break;
+
+  case 25: // instr_arg: MUL SBR_OPEN REG SBR_CLOSE
+#line 89 "parser.y"
+           { assembler.instrArgRegInd(yystack_[1].value.as < std::string > (), true); }
+#line 706 "src/parser.cpp"
+    break;
+
+  case 26: // instr_arg: MUL SBR_OPEN REG PLUS literal SBR_CLOSE
+#line 91 "parser.y"
+           { assembler.instrArgRegIndLit(yystack_[3].value.as < std::string > (), yystack_[1].value.as < unsigned long > ()); }
+#line 712 "src/parser.cpp"
+    break;
+
+  case 27: // instr_arg: MUL SBR_OPEN REG PLUS IDENT SBR_CLOSE
+#line 93 "parser.y"
+           { assembler.instrArgRegIndSym(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > ()); }
+#line 718 "src/parser.cpp"
+    break;
+
+  case 28: // dir: PERIOD IDENT
+#line 95 "parser.y"
+                   { assembler.dir(yystack_[0].value.as < std::string > ()); }
+#line 724 "src/parser.cpp"
+    break;
+
+  case 29: // dir: PERIOD IDENT dir_arg_list
+#line 96 "parser.y"
+                                { assembler.dir(yystack_[1].value.as < std::string > ()); }
+#line 730 "src/parser.cpp"
+    break;
+
+  case 32: // dir_arg: IDENT
+#line 101 "parser.y"
+               { assembler.dirArgSym(yystack_[0].value.as < std::string > ()); }
+#line 736 "src/parser.cpp"
     break;
 
   case 33: // dir_arg: literal
-#line 88 "parser.y"
-                 { yylhs.value.as < std::string > () = yystack_[0].value.as < std::string > (); }
-#line 612 "src/parser.cpp"
+#line 102 "parser.y"
+                 { assembler.dirArgLit(yystack_[0].value.as < unsigned long > ()); }
+#line 742 "src/parser.cpp"
     break;
 
   case 34: // literal: INT_10
-#line 90 "parser.y"
-                { yylhs.value.as < std::string > () = yystack_[0].value.as < std::string > (); }
-#line 618 "src/parser.cpp"
+#line 104 "parser.y"
+                { yylhs.value.as < unsigned long > () = std::stoul(yystack_[0].value.as < std::string > (), nullptr, 10); }
+#line 748 "src/parser.cpp"
     break;
 
   case 35: // literal: INT_16
-#line 91 "parser.y"
-                { yylhs.value.as < std::string > () = yystack_[0].value.as < std::string > (); }
-#line 624 "src/parser.cpp"
+#line 105 "parser.y"
+                { yylhs.value.as < unsigned long > () = std::stoul(yystack_[0].value.as < std::string > (), nullptr, 16); }
+#line 754 "src/parser.cpp"
     break;
 
   case 36: // label: IDENT COLON
-#line 93 "parser.y"
-                   { yylhs.value.as < std::string > () = yystack_[1].value.as < std::string > (); }
-#line 630 "src/parser.cpp"
+#line 107 "parser.y"
+                   { assembler.label(yystack_[1].value.as < std::string > ()); }
+#line 760 "src/parser.cpp"
     break;
 
 
-#line 634 "src/parser.cpp"
+#line 764 "src/parser.cpp"
 
             default:
               break;
@@ -1188,10 +1318,10 @@ namespace yy {
   const signed char
   Parser::yyrline_[] =
   {
-       0,    51,    51,    52,    54,    55,    56,    57,    58,    59,
-      61,    62,    63,    65,    66,    67,    68,    69,    70,    71,
-      72,    73,    74,    75,    76,    77,    78,    79,    81,    82,
-      84,    85,    87,    88,    90,    91,    93,    95,    96
+       0,    50,    50,    51,    53,    54,    55,    56,    57,    58,
+      60,    61,    62,    64,    66,    68,    70,    72,    74,    76,
+      78,    80,    82,    84,    86,    88,    90,    92,    95,    96,
+      98,    99,   101,   102,   104,   105,   107,   109,   110
   };
 
   void
@@ -1224,9 +1354,9 @@ namespace yy {
 
 #line 31 "parser.y"
 } // yy
-#line 1228 "src/parser.cpp"
+#line 1358 "src/parser.cpp"
 
-#line 97 "parser.y"
+#line 111 "parser.y"
 
 
 #include <iostream>

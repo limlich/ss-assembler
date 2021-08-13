@@ -44,8 +44,7 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
 %token NEWLINE
 
 %type <std::string> label
-%type <std::string> literal
-%type <std::string> dir_arg
+%type <unsigned long> literal
 
 %%
 program: %empty
@@ -58,39 +57,54 @@ line: NEWLINE
     | label instr endline
     | label dir endline
 
-instr: IDENT
-    |  IDENT instr_arg
-    |  IDENT instr_arg COMMA instr_arg
+instr: IDENT { assembler.instr($1); }
+    |  IDENT instr_arg { assembler.instr($1); }
+    |  IDENT instr_arg COMMA instr_arg { assembler.instr($1); }
 
 instr_arg: DOLLAR literal                          /* $<literal>           */
+           { assembler.instrArgImmedLit($2); }
     |      DOLLAR IDENT                            /* $<symbol>            */
+           { assembler.instrArgImmedSym($2); }
     |      literal                                 /* <literal>            */
+           { assembler.instrArgMemDirOrJmpImmedLit($1); }
     |      IDENT                                   /* <symbol>             */
+           { assembler.instrArgMemDirOrJmpImmedSym($1); }
     |      PERCENT IDENT                           /* %<symbol>            */
+           { assembler.instrArgPCRel($2); }
     |      REG                                     /* <reg>                */
+           { assembler.instrArgRegDir($1); }
     |      SBR_OPEN REG SBR_CLOSE                  /* [<reg>]              */
+           { assembler.instrArgRegInd($2); }
     |      SBR_OPEN REG PLUS literal SBR_CLOSE     /* [<reg> + <literal>]  */
+           { assembler.instrArgRegIndLit($2, $4); }
     |      SBR_OPEN REG PLUS IDENT SBR_CLOSE       /* [<reg> + <symbol>]   */
+           { assembler.instrArgRegIndSym($2, $4); }
     |      MUL literal                             /* *<literal>           */
+           { assembler.instrArgMemDirOrJmpImmedLit($2, true); }
     |      MUL IDENT                               /* *<symbol>            */
+           { assembler.instrArgMemDirOrJmpImmedSym($2, true); }
     |      MUL REG                                 /* *<reg>               */
+           { assembler.instrArgRegDir($2, true); }
     |      MUL SBR_OPEN REG SBR_CLOSE              /* *[<reg>]             */
+           { assembler.instrArgRegInd($3, true); }
     |      MUL SBR_OPEN REG PLUS literal SBR_CLOSE /* *[<reg> + <literal>] */
+           { assembler.instrArgRegIndLit($3, $5); }
     |      MUL SBR_OPEN REG PLUS IDENT SBR_CLOSE   /* *[<reg> + <symbol>]  */
+           { assembler.instrArgRegIndSym($3, $5); }
 
-dir:  PERIOD IDENT
-    | PERIOD IDENT dir_arg_list
+dir:  PERIOD IDENT { assembler.dir($2); }
+    | PERIOD IDENT dir_arg_list { assembler.dir($2); }
 
 dir_arg_list: dir_arg
     | dir_arg_list COMMA dir_arg
 
-dir_arg: IDENT { $$ = $1; }
-    |    literal { $$ = $1; }
+dir_arg: IDENT { assembler.dirArgSym($1); }
+    |    literal { assembler.dirArgLit($1); }
 
-literal: INT_10 { $$ = $1; }
-    |    INT_16 { $$ = $1; }
+literal: INT_10 { $$ = std::stoul($1, nullptr, 10); }
+    |    INT_16 { $$ = std::stoul($1, nullptr, 16); }
 
-label: IDENT COLON { $$ = $1; }
+label: IDENT COLON { assembler.label($1); }
 
 endline: NEWLINE
     |    YYEOF

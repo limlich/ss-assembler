@@ -379,10 +379,11 @@ namespace yy {
       // INT_10
       // INT_16
       // REG
-      // dir_arg
-      // literal
       // label
       char dummy1[sizeof (std::string)];
+
+      // literal
+      char dummy2[sizeof (unsigned long)];
     };
 
     /// The size of the largest semantic type.
@@ -531,10 +532,12 @@ namespace yy {
       case symbol_kind::TOKEN_INT_10: // INT_10
       case symbol_kind::TOKEN_INT_16: // INT_16
       case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_dir_arg: // dir_arg
-      case symbol_kind::TOKEN_literal: // literal
       case symbol_kind::TOKEN_label: // label
         value.move< std::string > (std::move (that.value));
+        break;
+
+      case symbol_kind::TOKEN_literal: // literal
+        value.move< unsigned long > (std::move (that.value));
         break;
 
       default:
@@ -574,6 +577,20 @@ namespace yy {
       {}
 #endif
 
+#if 201103L <= YY_CPLUSPLUS
+      basic_symbol (typename Base::kind_type t, unsigned long&& v, location_type&& l)
+        : Base (t)
+        , value (std::move (v))
+        , location (std::move (l))
+      {}
+#else
+      basic_symbol (typename Base::kind_type t, const unsigned long& v, const location_type& l)
+        : Base (t)
+        , value (v)
+        , location (l)
+      {}
+#endif
+
       /// Destroy the symbol.
       ~basic_symbol ()
       {
@@ -600,10 +617,12 @@ switch (yykind)
       case symbol_kind::TOKEN_INT_10: // INT_10
       case symbol_kind::TOKEN_INT_16: // INT_16
       case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_dir_arg: // dir_arg
-      case symbol_kind::TOKEN_literal: // literal
       case symbol_kind::TOKEN_label: // label
         value.template destroy< std::string > ();
+        break;
+
+      case symbol_kind::TOKEN_literal: // literal
+        value.template destroy< unsigned long > ();
         break;
 
       default:
@@ -1430,10 +1449,12 @@ switch (yykind)
       case symbol_kind::TOKEN_INT_10: // INT_10
       case symbol_kind::TOKEN_INT_16: // INT_16
       case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_dir_arg: // dir_arg
-      case symbol_kind::TOKEN_literal: // literal
       case symbol_kind::TOKEN_label: // label
         value.copy< std::string > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::TOKEN_literal: // literal
+        value.copy< unsigned long > (YY_MOVE (that.value));
         break;
 
       default:
@@ -1469,10 +1490,12 @@ switch (yykind)
       case symbol_kind::TOKEN_INT_10: // INT_10
       case symbol_kind::TOKEN_INT_16: // INT_16
       case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_dir_arg: // dir_arg
-      case symbol_kind::TOKEN_literal: // literal
       case symbol_kind::TOKEN_label: // label
         value.move< std::string > (YY_MOVE (s.value));
+        break;
+
+      case symbol_kind::TOKEN_literal: // literal
+        value.move< unsigned long > (YY_MOVE (s.value));
         break;
 
       default:
@@ -1538,7 +1561,7 @@ switch (yykind)
 
 #line 31 "parser.y"
 } // yy
-#line 1542 "inc/parser.hpp"
+#line 1565 "inc/parser.hpp"
 
 
 
