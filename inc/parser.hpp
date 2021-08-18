@@ -48,13 +48,14 @@
 #line 5 "parser.y"
 
 #include <string>
+#include "types.hpp"
 
 namespace yy {
     class Lexer;
 }
 class Assembler;
 
-#line 58 "inc/parser.hpp"
+#line 59 "inc/parser.hpp"
 
 
 # include <cstdlib> // std::abort
@@ -182,9 +183,9 @@ class Assembler;
 # define YYDEBUG 0
 #endif
 
-#line 31 "parser.y"
+#line 34 "parser.y"
 namespace yy {
-#line 188 "inc/parser.hpp"
+#line 189 "inc/parser.hpp"
 
 
 
@@ -383,7 +384,7 @@ namespace yy {
       char dummy1[sizeof (std::string)];
 
       // literal
-      char dummy2[sizeof (unsigned long)];
+      char dummy2[sizeof (ushort)];
     };
 
     /// The size of the largest semantic type.
@@ -537,7 +538,7 @@ namespace yy {
         break;
 
       case symbol_kind::TOKEN_literal: // literal
-        value.move< unsigned long > (std::move (that.value));
+        value.move< ushort > (std::move (that.value));
         break;
 
       default:
@@ -578,13 +579,13 @@ namespace yy {
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, unsigned long&& v, location_type&& l)
+      basic_symbol (typename Base::kind_type t, ushort&& v, location_type&& l)
         : Base (t)
         , value (std::move (v))
         , location (std::move (l))
       {}
 #else
-      basic_symbol (typename Base::kind_type t, const unsigned long& v, const location_type& l)
+      basic_symbol (typename Base::kind_type t, const ushort& v, const location_type& l)
         : Base (t)
         , value (v)
         , location (l)
@@ -622,7 +623,7 @@ switch (yykind)
         break;
 
       case symbol_kind::TOKEN_literal: // literal
-        value.template destroy< unsigned long > ();
+        value.template destroy< ushort > ();
         break;
 
       default:
@@ -1138,7 +1139,7 @@ switch (yykind)
 
 #if YYDEBUG
     // YYRLINE[YYN] -- Source line where rule number YYN was defined.
-    static const signed char yyrline_[];
+    static const unsigned char yyrline_[];
     /// Report on the debug stream that the rule \a r is going to be reduced.
     virtual void yy_reduce_print_ (int r) const;
     /// Print the state stack on the debug stream.
@@ -1454,7 +1455,7 @@ switch (yykind)
         break;
 
       case symbol_kind::TOKEN_literal: // literal
-        value.copy< unsigned long > (YY_MOVE (that.value));
+        value.copy< ushort > (YY_MOVE (that.value));
         break;
 
       default:
@@ -1495,7 +1496,7 @@ switch (yykind)
         break;
 
       case symbol_kind::TOKEN_literal: // literal
-        value.move< unsigned long > (YY_MOVE (s.value));
+        value.move< ushort > (YY_MOVE (s.value));
         break;
 
       default:
@@ -1559,9 +1560,9 @@ switch (yykind)
     return this->kind ();
   }
 
-#line 31 "parser.y"
+#line 34 "parser.y"
 } // yy
-#line 1565 "inc/parser.hpp"
+#line 1566 "inc/parser.hpp"
 
 
 

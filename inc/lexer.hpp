@@ -2,13 +2,14 @@
 #define LEXER_H
 
 #include <istream>
-#include "parser.hpp"
 
 #ifndef yyFlexLexerOnce
 #undef yyFlexLexer
 #define yyFlexLexer yyFlexLexer
 #include <FlexLexer.h>
 #endif
+
+#include "parser.hpp"
 
 class Assembler;
 

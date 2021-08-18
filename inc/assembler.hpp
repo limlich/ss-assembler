@@ -1,15 +1,36 @@
 #ifndef ASSEMBLER_H
 #define ASSEMBLER_H
 
+#include <unordered_map>
+#include <variant>
+#include <vector>
+#include <string>
+
 #include "lexer.hpp"
 #include "parser.hpp"
+#include "section.hpp"
+#include "instruction.hpp"
+#include "directive.hpp"
+#include "register.hpp"
+#include "symbol.hpp"
+#include "types.hpp"
+
+enum AssemblerExitCode: int
+{
+    AE_OK = 0,
+    AE_END, // .end directive
+    AE_FILE, // file errors (cannot open file, no file provided...)
+    AE_SYNTAX, // syntax error
+    AE_SYMBOL, // symbol errors (multiple definition, not defined...)
+    AE_SECTION, // section errors (no section, multiple definition)
+};
 
 class Assembler
 {
 public:
     Assembler();
 
-    int run(const std::string& filename);
+    int run(const std::string& inFilename, const std::string& outFilename);
 
     const yy::location& getLocation() const { return location_; }
 
@@ -22,27 +43,55 @@ public:
     friend class yy::Parser;
 
 private: // Parser callbacks
-    void instr(const std::string& instr);
-    void instrArgImmedLit(unsigned long lit); // $<literal>
-    void instrArgImmedSym(const std::string& sym); // $<symbol>
-    void instrArgMemDirOrJmpImmedLit(unsigned long lit, bool jmp = false); // <literal> (memdir or jmp immed) | *<literal> (jmp memdir)
-    void instrArgMemDirOrJmpImmedSym(const std::string& sym, bool jmp = false); // <symbol> (memdir or jmp immed) | *<symbol> (jmp memdir)
-    void instrArgPCRel(const std::string& sym); // %<literal>
-    void instrArgRegDir(const std::string& reg, bool jmp = false); // <reg> | *<reg>
-    void instrArgRegInd(const std::string& reg, bool jmp = false); // [<reg>] | *[<reg>]
-    void instrArgRegIndLit(const std::string& reg, unsigned long lit, bool jmp = false); // [<reg> + <literal>] | *[<reg> + <literal>]
-    void instrArgRegIndSym(const std::string& reg, const std::string& sym, bool jmp = false); // [<reg> + <symbol>] | *[<reg> + <symbol>]
+    int instr(std::string instrName);
+    int instrArgImmed(instr_arg_type arg); // $<literal> | $<symbol>
+    int instrArgMemDirOrJmpImmed(instr_arg_type arg, bool jmpSyntax = false); // <lit/sym> (memdir or jmp immed) | *<lit/sym> (jmp memdir)
+    int instrArgPCRel(const std::string& sym); // %<symbol>
+    int instrArgRegDir(const std::string& reg, bool jmpSyntax = false); // <reg> | *<reg>
+    int instrArgRegInd(const std::string& reg, bool jmpSyntax = false); // [<reg>] | *[<reg>]
+    int instrArgRegIndOff(const std::string& reg, instr_arg_type off, bool jmpSyntax = false); // [<reg> + <lit/sym>] | *[<reg> + <lit/sym>]
 
-    void dir(const std::string& dir);
-    void dirArgLit(unsigned long lit);
-    void dirArgSym(const std::string& sym);
+    int dir(const std::string& dirName);
+    int dirArg(dir_arg_type arg);
 
-    void label(const std::string& label);
+    int label(const std::string& label);
 
 private:
+    int instrFirstPass(const std::string& instrName);
+    int instrSecondPass(const std::string& instrName);
+    int dirFirstPass(const std::string& dirName);
+    int dirSecondPass(const std::string& dirName);
+
+    int writeToFile(const std::string& outFilename);
+
+    void clearArgsAndLabels();
+
+    void syntaxError(const std::string& msg);
+    void error(const std::string& msg);
+
     yy::Lexer lexer_;
     yy::Parser parser_;
     yy::location location_;
+
+    ubyte pass_;
+    uint lc_;
+
+    // Section
+    section_table sections_;
+    std::string section_; // current section
+    std::vector<ubyte>* sectionData_; // current section data
+
+    // Instruction data
+    ubyte instrNumArgs_;
+    InstrArg instrArgs_[2];
+    RegIndUpdateType regIndUpdate_;
+
+    // Directive data
+    std::vector<dir_arg_type> dirArgs_;
+
+    // Symbols
+    std::vector<std::string> labels_;
+    symbol_table symbols_;
 };
 
 #endif

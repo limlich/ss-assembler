@@ -4,6 +4,7 @@
 
 %code requires {
 #include <string>
+#include "types.hpp"
 
 namespace yy {
     class Lexer;
@@ -20,6 +21,8 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
 {
     return lexer.get_token(assembler);
 }
+
+#define RET_ON_ERROR(X) { int r = X; if (r != AE_OK) return r; }
 }
 
 %param {yy::Lexer& lexer}
@@ -44,7 +47,7 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
 %token NEWLINE
 
 %type <std::string> label
-%type <unsigned long> literal
+%type <ushort> literal
 
 %%
 program: %empty
@@ -57,54 +60,69 @@ line: NEWLINE
     | label instr endline
     | label dir endline
 
-instr: IDENT { assembler.instr($1); }
-    |  IDENT instr_arg { assembler.instr($1); }
-    |  IDENT instr_arg COMMA instr_arg { assembler.instr($1); }
+instr: IDENT { RET_ON_ERROR(assembler.instr($1)) }
+    |  IDENT instr_arg { RET_ON_ERROR(assembler.instr($1)) }
+    |  IDENT instr_arg COMMA instr_arg { RET_ON_ERROR(assembler.instr($1)) }
 
 instr_arg: DOLLAR literal                          /* $<literal>           */
-           { assembler.instrArgImmedLit($2); }
+           { RET_ON_ERROR(assembler.instrArgImmed($2)) }
     |      DOLLAR IDENT                            /* $<symbol>            */
-           { assembler.instrArgImmedSym($2); }
+           { RET_ON_ERROR(assembler.instrArgImmed($2)) }
     |      literal                                 /* <literal>            */
-           { assembler.instrArgMemDirOrJmpImmedLit($1); }
+           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed($1)) }
     |      IDENT                                   /* <symbol>             */
-           { assembler.instrArgMemDirOrJmpImmedSym($1); }
+           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed($1)) }
     |      PERCENT IDENT                           /* %<symbol>            */
-           { assembler.instrArgPCRel($2); }
+           { RET_ON_ERROR(assembler.instrArgPCRel($2)) }
     |      REG                                     /* <reg>                */
-           { assembler.instrArgRegDir($1); }
+           { RET_ON_ERROR(assembler.instrArgRegDir($1)) }
     |      SBR_OPEN REG SBR_CLOSE                  /* [<reg>]              */
-           { assembler.instrArgRegInd($2); }
+           { RET_ON_ERROR(assembler.instrArgRegInd($2)) }
     |      SBR_OPEN REG PLUS literal SBR_CLOSE     /* [<reg> + <literal>]  */
-           { assembler.instrArgRegIndLit($2, $4); }
+           { RET_ON_ERROR(assembler.instrArgRegIndOff($2, $4)) }
     |      SBR_OPEN REG PLUS IDENT SBR_CLOSE       /* [<reg> + <symbol>]   */
-           { assembler.instrArgRegIndSym($2, $4); }
+           { RET_ON_ERROR(assembler.instrArgRegIndOff($2, $4)) }
     |      MUL literal                             /* *<literal>           */
-           { assembler.instrArgMemDirOrJmpImmedLit($2, true); }
+           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed($2, true)) }
     |      MUL IDENT                               /* *<symbol>            */
-           { assembler.instrArgMemDirOrJmpImmedSym($2, true); }
+           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed($2, true)) }
     |      MUL REG                                 /* *<reg>               */
-           { assembler.instrArgRegDir($2, true); }
+           { RET_ON_ERROR(assembler.instrArgRegDir($2, true)) }
     |      MUL SBR_OPEN REG SBR_CLOSE              /* *[<reg>]             */
-           { assembler.instrArgRegInd($3, true); }
+           { RET_ON_ERROR(assembler.instrArgRegInd($3, true)) }
     |      MUL SBR_OPEN REG PLUS literal SBR_CLOSE /* *[<reg> + <literal>] */
-           { assembler.instrArgRegIndLit($3, $5); }
+           { RET_ON_ERROR(assembler.instrArgRegIndOff($3, $5, true)) }
     |      MUL SBR_OPEN REG PLUS IDENT SBR_CLOSE   /* *[<reg> + <symbol>]  */
-           { assembler.instrArgRegIndSym($3, $5); }
+           { RET_ON_ERROR(assembler.instrArgRegIndOff($3, $5, true)) }
 
-dir:  PERIOD IDENT { assembler.dir($2); }
-    | PERIOD IDENT dir_arg_list { assembler.dir($2); }
+dir:  PERIOD IDENT { RET_ON_ERROR(assembler.dir($2)) }
+    | PERIOD IDENT dir_arg_list { RET_ON_ERROR(assembler.dir($2)) }
 
 dir_arg_list: dir_arg
     | dir_arg_list COMMA dir_arg
 
-dir_arg: IDENT { assembler.dirArgSym($1); }
-    |    literal { assembler.dirArgLit($1); }
+dir_arg: IDENT { RET_ON_ERROR(assembler.dirArg($1)) }
+    |    literal { RET_ON_ERROR(assembler.dirArg($1)) }
 
-literal: INT_10 { $$ = std::stoul($1, nullptr, 10); }
-    |    INT_16 { $$ = std::stoul($1, nullptr, 16); }
+literal: INT_10 {
+           uint lit = std::stoul($1, nullptr, 10);
+           if (lit > 0xFFFFul) {
+              error(assembler.getLocation(), "syntax error, literal value outside bounds: " + $1);
+              return 1;
+           }
+           $$ = (ushort)lit;
+         }
 
-label: IDENT COLON { assembler.label($1); }
+    |    INT_16 {
+           uint lit = std::stoul($1, nullptr, 16);
+           if (lit > 0xFFFFul) {
+             error(assembler.getLocation(), "syntax error, literal value outside bounds: " + $1);
+             return 1;
+           }
+           $$ = (ushort)lit;
+         }
+
+label: IDENT COLON { RET_ON_ERROR(assembler.label($1)); }
 
 endline: NEWLINE
     |    YYEOF

@@ -35,7 +35,7 @@
 // private implementation details that can be changed or removed.
 
 // "%code top" blocks.
-#line 14 "parser.y"
+#line 15 "parser.y"
 
 #include "lexer.hpp"
 #include "parser.hpp"
@@ -46,7 +46,9 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
     return lexer.get_token(assembler);
 }
 
-#line 50 "src/parser.cpp"
+#define RET_ON_ERROR(X) { int r = X; if (r != AE_OK) return r; }
+
+#line 52 "src/parser.cpp"
 
 
 
@@ -144,9 +146,9 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-#line 31 "parser.y"
+#line 34 "parser.y"
 namespace yy {
-#line 150 "src/parser.cpp"
+#line 152 "src/parser.cpp"
 
   /// Build a parser object.
   Parser::Parser (yy::Lexer& lexer_yyarg, Assembler& assembler_yyarg)
@@ -225,7 +227,7 @@ namespace yy {
         break;
 
       case symbol_kind::TOKEN_literal: // literal
-        value.YY_MOVE_OR_COPY< unsigned long > (YY_MOVE (that.value));
+        value.YY_MOVE_OR_COPY< ushort > (YY_MOVE (that.value));
         break;
 
       default:
@@ -252,7 +254,7 @@ namespace yy {
         break;
 
       case symbol_kind::TOKEN_literal: // literal
-        value.move< unsigned long > (YY_MOVE (that.value));
+        value.move< ushort > (YY_MOVE (that.value));
         break;
 
       default:
@@ -279,7 +281,7 @@ namespace yy {
         break;
 
       case symbol_kind::TOKEN_literal: // literal
-        value.copy< unsigned long > (that.value);
+        value.copy< ushort > (that.value);
         break;
 
       default:
@@ -305,7 +307,7 @@ namespace yy {
         break;
 
       case symbol_kind::TOKEN_literal: // literal
-        value.move< unsigned long > (that.value);
+        value.move< ushort > (that.value);
         break;
 
       default:
@@ -586,7 +588,7 @@ namespace yy {
         break;
 
       case symbol_kind::TOKEN_literal: // literal
-        yylhs.value.emplace< unsigned long > ();
+        yylhs.value.emplace< ushort > ();
         break;
 
       default:
@@ -610,157 +612,171 @@ namespace yy {
           switch (yyn)
             {
   case 10: // instr: IDENT
-#line 60 "parser.y"
-             { assembler.instr(yystack_[0].value.as < std::string > ()); }
-#line 616 "src/parser.cpp"
+#line 63 "parser.y"
+             { RET_ON_ERROR(assembler.instr(yystack_[0].value.as < std::string > ())) }
+#line 618 "src/parser.cpp"
     break;
 
   case 11: // instr: IDENT instr_arg
-#line 61 "parser.y"
-                       { assembler.instr(yystack_[1].value.as < std::string > ()); }
-#line 622 "src/parser.cpp"
+#line 64 "parser.y"
+                       { RET_ON_ERROR(assembler.instr(yystack_[1].value.as < std::string > ())) }
+#line 624 "src/parser.cpp"
     break;
 
   case 12: // instr: IDENT instr_arg COMMA instr_arg
-#line 62 "parser.y"
-                                       { assembler.instr(yystack_[3].value.as < std::string > ()); }
-#line 628 "src/parser.cpp"
+#line 65 "parser.y"
+                                       { RET_ON_ERROR(assembler.instr(yystack_[3].value.as < std::string > ())) }
+#line 630 "src/parser.cpp"
     break;
 
   case 13: // instr_arg: DOLLAR literal
-#line 65 "parser.y"
-           { assembler.instrArgImmedLit(yystack_[0].value.as < unsigned long > ()); }
-#line 634 "src/parser.cpp"
+#line 68 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgImmed(yystack_[0].value.as < ushort > ())) }
+#line 636 "src/parser.cpp"
     break;
 
   case 14: // instr_arg: DOLLAR IDENT
-#line 67 "parser.y"
-           { assembler.instrArgImmedSym(yystack_[0].value.as < std::string > ()); }
-#line 640 "src/parser.cpp"
+#line 70 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgImmed(yystack_[0].value.as < std::string > ())) }
+#line 642 "src/parser.cpp"
     break;
 
   case 15: // instr_arg: literal
-#line 69 "parser.y"
-           { assembler.instrArgMemDirOrJmpImmedLit(yystack_[0].value.as < unsigned long > ()); }
-#line 646 "src/parser.cpp"
+#line 72 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < ushort > ())) }
+#line 648 "src/parser.cpp"
     break;
 
   case 16: // instr_arg: IDENT
-#line 71 "parser.y"
-           { assembler.instrArgMemDirOrJmpImmedSym(yystack_[0].value.as < std::string > ()); }
-#line 652 "src/parser.cpp"
+#line 74 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < std::string > ())) }
+#line 654 "src/parser.cpp"
     break;
 
   case 17: // instr_arg: PERCENT IDENT
-#line 73 "parser.y"
-           { assembler.instrArgPCRel(yystack_[0].value.as < std::string > ()); }
-#line 658 "src/parser.cpp"
+#line 76 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgPCRel(yystack_[0].value.as < std::string > ())) }
+#line 660 "src/parser.cpp"
     break;
 
   case 18: // instr_arg: REG
-#line 75 "parser.y"
-           { assembler.instrArgRegDir(yystack_[0].value.as < std::string > ()); }
-#line 664 "src/parser.cpp"
+#line 78 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgRegDir(yystack_[0].value.as < std::string > ())) }
+#line 666 "src/parser.cpp"
     break;
 
   case 19: // instr_arg: SBR_OPEN REG SBR_CLOSE
-#line 77 "parser.y"
-           { assembler.instrArgRegInd(yystack_[1].value.as < std::string > ()); }
-#line 670 "src/parser.cpp"
+#line 80 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgRegInd(yystack_[1].value.as < std::string > ())) }
+#line 672 "src/parser.cpp"
     break;
 
   case 20: // instr_arg: SBR_OPEN REG PLUS literal SBR_CLOSE
-#line 79 "parser.y"
-           { assembler.instrArgRegIndLit(yystack_[3].value.as < std::string > (), yystack_[1].value.as < unsigned long > ()); }
-#line 676 "src/parser.cpp"
+#line 82 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < ushort > ())) }
+#line 678 "src/parser.cpp"
     break;
 
   case 21: // instr_arg: SBR_OPEN REG PLUS IDENT SBR_CLOSE
-#line 81 "parser.y"
-           { assembler.instrArgRegIndSym(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > ()); }
-#line 682 "src/parser.cpp"
+#line 84 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > ())) }
+#line 684 "src/parser.cpp"
     break;
 
   case 22: // instr_arg: MUL literal
-#line 83 "parser.y"
-           { assembler.instrArgMemDirOrJmpImmedLit(yystack_[0].value.as < unsigned long > (), true); }
-#line 688 "src/parser.cpp"
+#line 86 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < ushort > (), true)) }
+#line 690 "src/parser.cpp"
     break;
 
   case 23: // instr_arg: MUL IDENT
-#line 85 "parser.y"
-           { assembler.instrArgMemDirOrJmpImmedSym(yystack_[0].value.as < std::string > (), true); }
-#line 694 "src/parser.cpp"
+#line 88 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < std::string > (), true)) }
+#line 696 "src/parser.cpp"
     break;
 
   case 24: // instr_arg: MUL REG
-#line 87 "parser.y"
-           { assembler.instrArgRegDir(yystack_[0].value.as < std::string > (), true); }
-#line 700 "src/parser.cpp"
+#line 90 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgRegDir(yystack_[0].value.as < std::string > (), true)) }
+#line 702 "src/parser.cpp"
     break;
 
   case 25: // instr_arg: MUL SBR_OPEN REG SBR_CLOSE
-#line 89 "parser.y"
-           { assembler.instrArgRegInd(yystack_[1].value.as < std::string > (), true); }
-#line 706 "src/parser.cpp"
+#line 92 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgRegInd(yystack_[1].value.as < std::string > (), true)) }
+#line 708 "src/parser.cpp"
     break;
 
   case 26: // instr_arg: MUL SBR_OPEN REG PLUS literal SBR_CLOSE
-#line 91 "parser.y"
-           { assembler.instrArgRegIndLit(yystack_[3].value.as < std::string > (), yystack_[1].value.as < unsigned long > ()); }
-#line 712 "src/parser.cpp"
+#line 94 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < ushort > (), true)) }
+#line 714 "src/parser.cpp"
     break;
 
   case 27: // instr_arg: MUL SBR_OPEN REG PLUS IDENT SBR_CLOSE
-#line 93 "parser.y"
-           { assembler.instrArgRegIndSym(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > ()); }
-#line 718 "src/parser.cpp"
+#line 96 "parser.y"
+           { RET_ON_ERROR(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > (), true)) }
+#line 720 "src/parser.cpp"
     break;
 
   case 28: // dir: PERIOD IDENT
-#line 95 "parser.y"
-                   { assembler.dir(yystack_[0].value.as < std::string > ()); }
-#line 724 "src/parser.cpp"
+#line 98 "parser.y"
+                   { RET_ON_ERROR(assembler.dir(yystack_[0].value.as < std::string > ())) }
+#line 726 "src/parser.cpp"
     break;
 
   case 29: // dir: PERIOD IDENT dir_arg_list
-#line 96 "parser.y"
-                                { assembler.dir(yystack_[1].value.as < std::string > ()); }
-#line 730 "src/parser.cpp"
+#line 99 "parser.y"
+                                { RET_ON_ERROR(assembler.dir(yystack_[1].value.as < std::string > ())) }
+#line 732 "src/parser.cpp"
     break;
 
   case 32: // dir_arg: IDENT
-#line 101 "parser.y"
-               { assembler.dirArgSym(yystack_[0].value.as < std::string > ()); }
-#line 736 "src/parser.cpp"
+#line 104 "parser.y"
+               { RET_ON_ERROR(assembler.dirArg(yystack_[0].value.as < std::string > ())) }
+#line 738 "src/parser.cpp"
     break;
 
   case 33: // dir_arg: literal
-#line 102 "parser.y"
-                 { assembler.dirArgLit(yystack_[0].value.as < unsigned long > ()); }
-#line 742 "src/parser.cpp"
+#line 105 "parser.y"
+                 { RET_ON_ERROR(assembler.dirArg(yystack_[0].value.as < ushort > ())) }
+#line 744 "src/parser.cpp"
     break;
 
   case 34: // literal: INT_10
-#line 104 "parser.y"
-                { yylhs.value.as < unsigned long > () = std::stoul(yystack_[0].value.as < std::string > (), nullptr, 10); }
-#line 748 "src/parser.cpp"
+#line 107 "parser.y"
+                {
+           uint lit = std::stoul(yystack_[0].value.as < std::string > (), nullptr, 10);
+           if (lit > 0xFFFFul) {
+              error(assembler.getLocation(), "syntax error, literal value outside bounds: " + yystack_[0].value.as < std::string > ());
+              return 1;
+           }
+           yylhs.value.as < ushort > () = (ushort)lit;
+         }
+#line 757 "src/parser.cpp"
     break;
 
   case 35: // literal: INT_16
-#line 105 "parser.y"
-                { yylhs.value.as < unsigned long > () = std::stoul(yystack_[0].value.as < std::string > (), nullptr, 16); }
-#line 754 "src/parser.cpp"
+#line 116 "parser.y"
+                {
+           uint lit = std::stoul(yystack_[0].value.as < std::string > (), nullptr, 16);
+           if (lit > 0xFFFFul) {
+             error(assembler.getLocation(), "syntax error, literal value outside bounds: " + yystack_[0].value.as < std::string > ());
+             return 1;
+           }
+           yylhs.value.as < ushort > () = (ushort)lit;
+         }
+#line 770 "src/parser.cpp"
     break;
 
   case 36: // label: IDENT COLON
-#line 107 "parser.y"
-                   { assembler.label(yystack_[1].value.as < std::string > ()); }
-#line 760 "src/parser.cpp"
+#line 125 "parser.y"
+                   { RET_ON_ERROR(assembler.label(yystack_[1].value.as < std::string > ())); }
+#line 776 "src/parser.cpp"
     break;
 
 
-#line 764 "src/parser.cpp"
+#line 780 "src/parser.cpp"
 
             default:
               break;
@@ -1315,13 +1331,13 @@ namespace yy {
 
 
 #if YYDEBUG
-  const signed char
+  const unsigned char
   Parser::yyrline_[] =
   {
-       0,    50,    50,    51,    53,    54,    55,    56,    57,    58,
-      60,    61,    62,    64,    66,    68,    70,    72,    74,    76,
-      78,    80,    82,    84,    86,    88,    90,    92,    95,    96,
-      98,    99,   101,   102,   104,   105,   107,   109,   110
+       0,    53,    53,    54,    56,    57,    58,    59,    60,    61,
+      63,    64,    65,    67,    69,    71,    73,    75,    77,    79,
+      81,    83,    85,    87,    89,    91,    93,    95,    98,    99,
+     101,   102,   104,   105,   107,   116,   125,   127,   128
   };
 
   void
@@ -1352,11 +1368,11 @@ namespace yy {
 #endif // YYDEBUG
 
 
-#line 31 "parser.y"
+#line 34 "parser.y"
 } // yy
-#line 1358 "src/parser.cpp"
+#line 1374 "src/parser.cpp"
 
-#line 111 "parser.y"
+#line 129 "parser.y"
 
 
 #include <iostream>
