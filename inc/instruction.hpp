@@ -2,9 +2,6 @@
 #define INSTRUCTION_H
 
 #include <unordered_map>
-#include <variant>
-#include <vector>
-#include <string>
 
 #include "types.hpp"
 
@@ -50,16 +47,14 @@ struct InstrInfo
     addr_mode_type argAddrModes[2];
 };
 
-typedef std::variant<std::string, ushort> instr_arg_type;
-
 struct InstrArg
 {
     InstrArg() : jmpSyntax(false) {}
 
     bool jmpSyntax;
     addr_mode_type addrMode;
-    instr_arg_type val; // value
-    instr_arg_type off; // offset
+    string_ushort_variant val; // value
+    string_ushort_variant off; // offset
 };
 
 const std::unordered_map<std::string, InstrInfo> INSTRUCTIONS({

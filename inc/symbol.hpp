@@ -21,20 +21,19 @@ struct RelEntry
 
 struct Symbol
 {
-    Symbol()
-    {}
-    Symbol(const std::string& section, ushort value, bool imp, bool exp, bool rel) :
-        section(section), value(value), imp(imp), exp(exp), rel(rel)
+    Symbol() :
+        global(false), external(false), label(false), defined(false), value(0x00u), section("")
     {}
 
-    std::string section;
+    bool global; // .global
+    bool external; // .extern
+    bool label; // location dependent
+    bool defined;
     ushort value;
-    bool imp; // global
-    bool exp; // export
-    bool rel; // position dependent
+    std::string section;
     std::vector<RelEntry>  relEntries;
 };
 
-typedef std::unordered_map<std::string, Symbol> symbol_table;
+typedef std::unordered_map<std::string, Symbol> SymbolTable;
 
 #endif

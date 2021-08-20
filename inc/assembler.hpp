@@ -44,15 +44,15 @@ public:
 
 private: // Parser callbacks
     int instr(std::string instrName);
-    int instrArgImmed(instr_arg_type arg); // $<literal> | $<symbol>
-    int instrArgMemDirOrJmpImmed(instr_arg_type arg, bool jmpSyntax = false); // <lit/sym> (memdir or jmp immed) | *<lit/sym> (jmp memdir)
+    int instrArgImmed(string_ushort_variant arg); // $<literal> | $<symbol>
+    int instrArgMemDirOrJmpImmed(string_ushort_variant arg, bool jmpSyntax = false); // <lit/sym> (memdir or jmp immed) | *<lit/sym> (jmp memdir)
     int instrArgPCRel(const std::string& sym); // %<symbol>
     int instrArgRegDir(const std::string& reg, bool jmpSyntax = false); // <reg> | *<reg>
     int instrArgRegInd(const std::string& reg, bool jmpSyntax = false); // [<reg>] | *[<reg>]
-    int instrArgRegIndOff(const std::string& reg, instr_arg_type off, bool jmpSyntax = false); // [<reg> + <lit/sym>] | *[<reg> + <lit/sym>]
+    int instrArgRegIndOff(const std::string& reg, string_ushort_variant off, bool jmpSyntax = false); // [<reg> + <lit/sym>] | *[<reg> + <lit/sym>]
 
     int dir(const std::string& dirName);
-    int dirArg(dir_arg_type arg);
+    int dirArg(string_ushort_variant arg);
 
     int label(const std::string& label);
 
@@ -64,7 +64,8 @@ private:
 
     int writeToFile(const std::string& outFilename);
 
-    void clearArgsAndLabels();
+    int processLabels();
+    int processWord(string_ushort_variant &arg);
 
     void syntaxError(const std::string& msg);
     void error(const std::string& msg);
@@ -77,7 +78,7 @@ private:
     uint lc_;
 
     // Section
-    section_table sections_;
+    SectionTable sections_;
     std::string section_; // current section
     std::vector<ubyte>* sectionData_; // current section data
 
@@ -87,11 +88,11 @@ private:
     RegIndUpdateType regIndUpdate_;
 
     // Directive data
-    std::vector<dir_arg_type> dirArgs_;
+    std::vector<string_ushort_variant> dirArgs_;
 
     // Symbols
     std::vector<std::string> labels_;
-    symbol_table symbols_;
+    SymbolTable symbols_;
 };
 
 #endif
