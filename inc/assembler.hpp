@@ -64,11 +64,11 @@ private:
 
     int writeToFile(const std::string& outFilename);
 
-    int processLabels();
     int processWord(string_ushort_variant &arg);
 
     void syntaxError(const std::string& msg);
     void error(const std::string& msg);
+    void warning(const std::string& msg);
 
     yy::Lexer lexer_;
     yy::Parser parser_;
@@ -91,7 +91,7 @@ private:
     std::vector<string_ushort_variant> dirArgs_;
 
     // Symbols
-    std::vector<std::string> labels_;
+    bool labeled_;
     SymbolTable symbols_;
 };
 

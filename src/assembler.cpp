@@ -28,7 +28,7 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
 
         instrNumArgs_ = 0;
         dirArgs_.clear();
-        labels_.clear();
+        labeled_ = false;
         section_ = "";
         sectionData_ = nullptr;
         lc_ = 0;
@@ -94,7 +94,7 @@ int Assembler::instr(std::string instrName)
         res = instrSecondPass(instrName);
     
     instrNumArgs_ = 0;
-    labels_.clear();
+    labeled_ = false;
 
     return res;
 
@@ -114,9 +114,6 @@ int Assembler::instrFirstPass(const std::string& instrName)
                     + " operands, but " + std::to_string(instrNumArgs_)+ " were provided");
         return AE_SYNTAX;
     }
-
-    // add labels to symbol table
-    processLabels();
 
     lc_++; // InstrDescr
 
@@ -167,8 +164,7 @@ int Assembler::instrFirstPass(const std::string& instrName)
 }
 int Assembler::instrSecondPass(const std::string& instrName)
 {
-    auto instrIt = INSTRUCTIONS.find(instrName);
-    const InstrInfo& iInfo = instrIt->second;
+    const InstrInfo& iInfo = INSTRUCTIONS.find(instrName)->second;
 
     sectionData_->push_back(iInfo.opCode); // InstrDescr
     if (iInfo.numArgs == 0) // instr
@@ -327,7 +323,7 @@ int Assembler::dir(const std::string& dirName)
         res = dirSecondPass(dirName);
 
     dirArgs_.clear();
-    labels_.clear();
+    labeled_ = false;
 
     return res;
 }
@@ -346,10 +342,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
         return AE_SYNTAX;
     }
 
-    // Add labels to symbol table
-    if (dInfo.labelsAllowed)
-        processLabels();
-    else if (!labels_.empty()) {
+    if (!dInfo.labelsAllowed && labeled_) {
         syntaxError("directive doesn't support labels: " + dirName);
         return AE_SYNTAX;
     }
@@ -471,16 +464,23 @@ int Assembler::dirFirstPass(const std::string& dirName)
 }
 int Assembler::dirSecondPass(const std::string& dirName)
 {
-    auto it = DIRECTIVES.find(dirName);
-    const DirInfo& dInfo = it->second;
+    const DirInfo& dInfo = DIRECTIVES.find(dirName)->second;
 
     // Directives
     switch (dInfo.dir) {
-    case GLOBAL:
     case EXTERN:
     case EQU:
         break;
 
+    case GLOBAL:
+        for (uint i = 0; i < dirArgs_.size(); ++i) {
+            std::string symbolName = std::get<std::string>(dirArgs_[i]);
+            Symbol &symbol = symbols_[symbolName];
+            if (!symbol.defined) // undefined exported symbol
+                warning("undefined global symbol: " + symbolName);
+        }
+        break;
+        
     case SECTION:
         section_ = std::get<std::string>(dirArgs_[0]);
         sectionData_ = &sections_[section_].data;
@@ -512,8 +512,27 @@ int Assembler::dirArg(string_ushort_variant arg)
 
 int Assembler::label(const std::string& label)
 {
-    if (pass_ == 0)
-        labels_.push_back(label);
+    if (pass_ == 0) {
+        if (section_.empty()) {
+            error("label not in any section: " + label);
+            return AE_SYMBOL;
+        }
+        Symbol &symbol = symbols_[label];
+        if (symbol.defined) {
+            error("symbol already defined: " + label);
+            return AE_SYMBOL;
+        } else if (symbol.external) {
+            error("symbol already declared as extern: " + label);
+            return AE_SYMBOL;
+        } else { // symbol definition
+            symbol.defined = true;
+            symbol.label = true;
+            symbol.value = (ushort)lc_;
+            symbol.section = section_;
+            labeled_ = true;
+        }
+    }
+
     return AE_OK;
 }
 
@@ -528,27 +547,6 @@ int Assembler::writeToFile(const std::string& outFilename)
     // TODO:
 
     outFile.close();
-
-    return AE_OK;
-}
-
-int Assembler::processLabels()
-{
-    for (uint i = 0; i < labels_.size(); ++i) {
-        Symbol &symbol = symbols_[labels_[i]];
-        if (symbol.defined) {
-            error("symbol already defined: " + labels_[i]);
-            return AE_SYMBOL;
-        } else if (symbol.external) {
-            error("symbol already declared as extern: " + labels_[i]);
-            return AE_SYMBOL;
-        } else { // symbol definition
-            symbol.defined = true;
-            symbol.label = true;
-            symbol.value = (ushort)lc_;
-            symbol.section = section_;
-        }
-    }
 
     return AE_OK;
 }
@@ -592,4 +590,8 @@ void Assembler::syntaxError(const std::string& msg)
 void Assembler::error(const std::string& msg)
 {
     parser_.error(getLocation(), "error, " + msg);
+}
+void Assembler::warning(const std::string& msg)
+{
+    parser_.error(getLocation(), "warning, " + msg);
 }
