@@ -18,9 +18,9 @@
 enum AssemblerExitCode: int
 {
     AE_OK = 0,
+    AE_SYNTAX = 1, // syntax error
     AE_END, // .end directive
     AE_FILE, // file errors (cannot open file, no file provided...)
-    AE_SYNTAX, // syntax error
     AE_SYMBOL, // symbol errors (multiple definition, not defined...)
     AE_SECTION, // section errors (no section, multiple definition)
 };
