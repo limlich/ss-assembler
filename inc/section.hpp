@@ -11,7 +11,6 @@
 struct Section
 {
     std::vector<ubyte> data;
-    std::vector<RelEntry> relEntries;
 };
 
 typedef std::unordered_map<std::string, Section> SectionTable;

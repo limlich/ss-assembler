@@ -7,16 +7,19 @@
 
 #include "types.hpp"
 
+class Symbol;
+
 struct RelEntry
 {
     RelEntry()
     {}
-    RelEntry(const std::string& section, ushort location) :
-        section(section), location(location)
+    RelEntry(const Symbol *symbol, const std::string& section, ushort location) :
+        symbol(symbol), section(section), location(location)
     {}
 
-    std::string section;
-    ushort location;
+    const Symbol *symbol; // extern symbol or location dependent local symbol (label)
+    std::string section; // fixup section name
+    ushort location; // fixup address within section
 };
 
 struct Symbol
@@ -31,7 +34,6 @@ struct Symbol
     bool defined;
     ushort value;
     std::string section;
-    std::vector<RelEntry>  relEntries;
 };
 
 typedef std::unordered_map<std::string, Symbol> SymbolTable;

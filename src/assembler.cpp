@@ -15,9 +15,6 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         return AE_FILE;
     }
 
-    sections_.clear();
-    symbols_.clear();
-
     lexer_.switch_streams(&inFile);
 
     int res = AE_OK;
@@ -44,6 +41,10 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
 
     if (res == AE_OK)
         res = writeToFile(outFilename);
+
+    sections_.clear();
+    symbols_.clear();
+    relEntries_.clear();
 
     return res;
 }
@@ -397,7 +398,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
     switch (dInfo.dir) {
     case GLOBAL:
         for (uint i = 0; i < dirArgs_.size(); ++i) {
-            std::string symbolName = std::get<std::string>(dirArgs_[i]);
+            const std::string &symbolName = std::get<std::string>(dirArgs_[i]);
             Symbol &symbol = symbols_[symbolName];
             if (symbol.external) {
                 error("symbol already declared as extern: " + symbolName);
@@ -409,7 +410,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
 
     case EXTERN:
         for (uint i = 0; i < dirArgs_.size(); ++i) {
-            std::string symbolName = std::get<std::string>(dirArgs_[i]);
+            const std::string &symbolName = std::get<std::string>(dirArgs_[i]);
             Symbol &symbol = symbols_[symbolName];
             if (symbol.defined) {
                 error("symbol already defined: " + symbolName);
@@ -440,7 +441,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
         break;
 
     case EQU: {
-        std::string symbolName = std::get<std::string>(dirArgs_[0]);
+        const std::string &symbolName = std::get<std::string>(dirArgs_[0]);
         ushort literal = std::get<ushort>(dirArgs_[1]);
         Symbol &symbol = symbols_[symbolName];
         if (symbol.defined) {
@@ -560,8 +561,8 @@ int Assembler::processWord(string_ushort_variant &arg)
         dataHigh = *literal >> 8;
         dataLow = *literal;
     } else {
-        std::string symbolName = std::get<std::string>(arg);
-        Symbol &symbol = symbols_[symbolName];
+        const std::string &symbolName = std::get<std::string>(arg);
+        const Symbol &symbol = symbols_[symbolName];
         if (!symbol.defined && !symbol.external) {
             error("undeclared symbol " + symbolName);
             return AE_SYMBOL;
@@ -571,10 +572,8 @@ int Assembler::processWord(string_ushort_variant &arg)
         dataLow = symbol.value;
 
         // Relocation entries for labels and external symbols
-        if (symbol.label)
-            sections_[symbol.section].relEntries.emplace_back(section_, sectionData_->size()); // rel entries tied to local section
-        else if (symbol.external)
-            symbol.relEntries.emplace_back(section_, sectionData_->size()); // rel entries tied to extern symbol (extern section)
+        if (symbol.label || symbol.external)
+            relEntries_.emplace_back(&symbol, section_, sectionData_->size());
     }
 
     sectionData_->push_back(dataHigh);

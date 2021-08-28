@@ -93,6 +93,9 @@ private:
     // Symbols
     bool labeled_;
     SymbolTable symbols_;
+
+    // Relocation data
+    std::vector<RelEntry> relEntries_;
 };
 
 #endif
