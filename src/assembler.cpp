@@ -430,6 +430,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
 
         section_ = std::get<std::string>(dirArgs_[0]);
         sectionData_ = &sections_[section_].data;
+        lc_ = 0;
         break;
 
     case WORD:
