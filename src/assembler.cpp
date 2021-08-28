@@ -215,7 +215,7 @@ int Assembler::instrSecondPass(const std::string& instrName)
         break;
     case REGDIR:
         regS = *std::get_if<ushort>(&op->val);
-        addrMode = AM_MEMDIR;
+        addrMode = AM_REGDIR;
         break;
     case REGDIR_OFFSET:
         regS = *std::get_if<ushort>(&op->val);
