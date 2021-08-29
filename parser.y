@@ -50,15 +50,15 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
 %type <ushort> literal
 
 %%
-program: %empty
-    |    program line
+program: line
+    |    program NEWLINE line
 
-line: NEWLINE
-    | instr endline
-    | dir endline
-    | label endline
-    | label instr endline
-    | label dir endline
+line: %empty
+    | instr
+    | dir
+    | label
+    | label instr
+    | label dir
 
 instr: IDENT { RET_ON_ERROR(assembler.instr($1)) }
     |  IDENT instr_arg { RET_ON_ERROR(assembler.instr($1)) }
@@ -123,9 +123,6 @@ literal: INT_10 {
          }
 
 label: IDENT COLON { RET_ON_ERROR(assembler.label($1)); }
-
-endline: NEWLINE
-    |    YYEOF
 %%
 
 #include <iostream>

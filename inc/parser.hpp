@@ -491,8 +491,7 @@ namespace yy {
         TOKEN_dir_arg_list = 23,                 // dir_arg_list
         TOKEN_dir_arg = 24,                      // dir_arg
         TOKEN_literal = 25,                      // literal
-        TOKEN_label = 26,                        // label
-        TOKEN_endline = 27                       // endline
+        TOKEN_label = 26                         // label
       };
     };
 
@@ -1139,7 +1138,7 @@ switch (yykind)
 
 #if YYDEBUG
     // YYRLINE[YYN] -- Source line where rule number YYN was defined.
-    static const unsigned char yyrline_[];
+    static const signed char yyrline_[];
     /// Report on the debug stream that the rule \a r is going to be reduced.
     virtual void yy_reduce_print_ (int r) const;
     /// Print the state stack on the debug stream.
@@ -1375,9 +1374,9 @@ switch (yykind)
     /// Constants.
     enum
     {
-      yylast_ = 71,     ///< Last index in yytable_.
-      yynnts_ = 11,  ///< Number of nonterminal symbols.
-      yyfinal_ = 2 ///< Termination state number.
+      yylast_ = 64,     ///< Last index in yytable_.
+      yynnts_ = 10,  ///< Number of nonterminal symbols.
+      yyfinal_ = 20 ///< Termination state number.
     };
 
 
@@ -1562,7 +1561,7 @@ switch (yykind)
 
 #line 34 "parser.y"
 } // yy
-#line 1566 "inc/parser.hpp"
+#line 1565 "inc/parser.hpp"
 
 
 
