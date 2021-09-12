@@ -642,7 +642,7 @@ void Assembler::createSectionHeaderTable()
 {
     for (auto& [sectionName, section] : sections_) {
         section.id = sectionHeaderTable_.size();
-        section.entry.nameOffset = addToStrSection(sectionName_);
+        section.entry.nameOffset = addToStrSection(sectionName);
         sectionHeaderTable_.push_back(section.entry);
     }
 }
