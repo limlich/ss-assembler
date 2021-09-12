@@ -19,8 +19,8 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
 
     int res = AE_OK;
 
-    // Invalid section
-    sectionHeaderTable_.emplace_back(ST_NONE, 0);
+    initSectionHeaderTable();
+    initStrSection();
 
     for (pass_ = 0; pass_ < 2 && res == AE_OK; ++pass_) {
         inFile.seekg(0);
@@ -595,12 +595,13 @@ int Assembler::processWord(string_ushort_variant &arg)
     return AE_OK;
 }
 
-std::size_t Assembler::addToNamesSection(const std::string &str)
+std::size_t Assembler::addToStrSection(const std::string &str)
 {
-    size_t pos = strData_.size();
+    Section &strSection = sections_[STR_SECTION];
+    std::size_t pos = strSection.data.size();
 
-    strData_.insert(strData_.end(), str.cbegin(), str.cend());
-    strData_.emplace_back('\0');
+    strSection.data.insert(strSection.data.end(), str.cbegin(), str.cend());
+    strSection.data.emplace_back('\0');
 
     return pos;
 }
@@ -615,18 +616,40 @@ void Assembler::endSection()
     }
 }
 
+void Assembler::initSectionHeaderTable()
+{
+    // Invalid section
+    sectionHeaderTable_.emplace_back(ST_NONE, 0);
+}
+
+void Assembler::initStrSection()
+{
+    // Insert names section so access to it doesn't cause reallocation
+    // of section map and invalidate section pointers
+    Section strSection;
+    strSection.entry.type = ST_STR;
+    strSection.entry.nameOffset = 0;
+
+    strSection.data.reserve(STR_SECTION.size() + 1);
+    for (char c : STR_SECTION)
+        strSection.data.emplace_back((ubyte)c);
+    strSection.data.emplace_back('\0');
+
+    sections_[STR_SECTION] = strSection;
+}
+
 void Assembler::createSectionHeaderTable()
 {
-    for (auto &[sectionName, section] : sections_) {
+    for (auto& [sectionName, section] : sections_) {
         section.id = sectionHeaderTable_.size();
-        section.entry.nameOffset = addToNamesSection(sectionName_);
+        section.entry.nameOffset = addToStrSection(sectionName_);
         sectionHeaderTable_.push_back(section.entry);
     }
 }
 
 void Assembler::createSymbolTable()
 {
-    for (auto &[symbolName, symbol] : symbols_) {
+    for (auto& [symbolName, symbol] : symbols_) {
         symbol.id = symbolTable_.size();
 
         if (!symbol.section.empty())
@@ -653,6 +676,7 @@ void Assembler::createSymbolTable()
             break;
         }
 
+        symbol.entry.nameOffset = addToStrSection(symbolName);
         symbolTable_.push_back(symbol.entry);
     }
 }

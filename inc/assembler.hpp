@@ -68,10 +68,12 @@ private:
 
     int processWord(string_ushort_variant &arg);
 
-    std::size_t addToNamesSection(const std::string &str);
-
     void endSection();
 
+    void initStrSection();
+    std::size_t addToStrSection(const std::string &str);
+
+    void initSectionHeaderTable();
     void createSectionHeaderTable();
     void createSymbolTable();
 
@@ -85,9 +87,6 @@ private:
 
     ubyte pass_;
     uint lc_;
-
-    // Names section data
-    std::vector<char> strData_;
 
     // Section
     SectionMap sections_;

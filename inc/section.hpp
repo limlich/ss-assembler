@@ -16,7 +16,7 @@ enum SectionType: ubyte
     ST_STR, // section containing symbol identifiers
 };
 
-const std::string STR_SECTION = "..str"; // names section name
+const std::string STR_SECTION = ".names.str"; // names section name
 const std::string REL_SUFFIX = ".rel"; // relocation section suffix
 const std::string SECTION_PREFIX = "."; // section symbol prefix
 
