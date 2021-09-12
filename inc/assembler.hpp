@@ -66,6 +66,10 @@ private:
 
     int processWord(string_ushort_variant &arg);
 
+    std::size_t addToNamesSection(const std::string &str);
+
+    void endSection();
+
     void syntaxError(const std::string& msg);
     void error(const std::string& msg);
     void warning(const std::string& msg);
@@ -77,10 +81,14 @@ private:
     ubyte pass_;
     uint lc_;
 
+    // Names section data
+    std::vector<char> strData_;
+
     // Section
-    SectionTable sections_;
-    std::string section_; // current section
-    std::vector<ubyte>* sectionData_; // current section data
+    SectionMap sections_;
+    SectionHeaderTable sectionHeaderTable_;
+    std::string sectionName_; // current section name
+    Section *section_; // current section
 
     // Instruction data
     ubyte instrNumArgs_;
@@ -92,9 +100,9 @@ private:
 
     // Symbols
     bool labeled_;
-    SymbolTable symbols_;
+    SymbolMap symbols_;
 
-    // Relocation data
+    // Relocation entries
     std::vector<RelEntry> relEntries_;
 };
 

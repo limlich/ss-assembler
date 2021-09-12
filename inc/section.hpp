@@ -16,27 +16,37 @@ enum SectionType: ubyte
     ST_STR, // section containing symbol identifiers
 };
 
+const std::string STR_SECTION = "..str"; // names section name
+const std::string REL_SUFFIX = ".rel"; // relocation section suffix
+const std::string SECTION_PREFIX = "."; // section symbol prefix
+
 struct SectionEntry
 {
     SectionEntry() :
         type(ST_NONE)
     {}
+    SectionEntry(SectionType type, ushort nameOffset) :
+        type(type), nameOffset(nameOffset), dataOffset(0), size(0)
+    {}
 
     SectionType type;
     ushort nameOffset; // offset in .str section
     uint dataOffset; // section data offset
+    ushort size; // section size in bytes
 };
 
 struct Section
 {
     Section() :
-        entry(nullptr)
+        id(0)
     {}
 
     std::vector<ubyte> data;
-    SectionEntry *entry;
+    std::vector<RelEntry> relEntries;
+    uint id; // section header table entry index
 };
 
-typedef std::unordered_map<std::string, Section> SectionTable;
+typedef std::unordered_map<std::string, Section> SectionMap;
+typedef std::vector<SectionEntry> SectionHeaderTable;
 
 #endif

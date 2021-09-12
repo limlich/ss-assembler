@@ -39,11 +39,19 @@ enum SymbolType: ubyte
 struct SymbolEntry
 {
     SymbolEntry() :
-        type(SYMT_UNDEF)
+        bind(SYMB_LOCAL), type(SYMT_UNDEF)
     {}
     SymbolEntry(SymbolBind bind, SymbolType type, ushort value, uint nameOffset, uint sectionEntryId) :
         bind(bind), type(type), value(value), nameOffset(nameOffset), sectionEntryId(sectionEntryId)
     {}
+
+    bool declared() const { return !(bind == SYMB_LOCAL && type == SYMT_UNDEF); }
+    bool external() const { return bind == SYMB_GLOBAL && type == SYMT_UNDEF; }
+    bool global() const { return bind == SYMB_GLOBAL && type != SYMT_UNDEF; }
+    bool undef() const { return bind != SYMB_LOCAL && type == SYMT_UNDEF; }
+    bool abs() const { return type == SYMT_ABS; }
+    bool label() const { return type == SYMT_LABEL; }
+    bool section() const { return type == SYMT_SECTION; }
 
     SymbolBind bind;
     SymbolType type;
@@ -55,7 +63,7 @@ struct SymbolEntry
 struct Symbol
 {
     Symbol() :
-        global(false), external(false), label(false), defined(false), value(0x00u), section(""), entry(nullptr)
+        global(false), external(false), label(false), defined(false), value(0x00u), section(""), id(0)
     {}
 
     bool global; // .global
@@ -64,9 +72,10 @@ struct Symbol
     bool defined;
     ushort value;
     std::string section;
-    SymbolEntry *entry;
+    uint id; // symbol table entry id
 };
 
-typedef std::unordered_map<std::string, Symbol> SymbolTable;
+typedef std::unordered_map<std::string, Symbol> SymbolMap;
+typedef std::vector<SymbolEntry> SymbolTable;
 
 #endif

@@ -19,6 +19,9 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
 
     int res = AE_OK;
 
+    // Invalid section
+    sectionHeaderTable_.emplace_back(ST_NONE, 0);
+
     for (pass_ = 0; pass_ < 2 && res == AE_OK; ++pass_) {
         inFile.seekg(0);
         location_.initialize(&inFilename);
@@ -26,13 +29,15 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         instrNumArgs_ = 0;
         dirArgs_.clear();
         labeled_ = false;
-        section_ = "";
-        sectionData_ = nullptr;
+        sectionName_ = "";
+        section_ = nullptr;
         lc_ = 0;
         
         res = parser_.parse();
         if (res == AE_END)
             res = AE_OK;
+        else if (res == AE_OK)
+            dir("end"); // implicit .end
     }
 
     location_.initialize();
@@ -43,6 +48,7 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         res = writeToFile(outFilename);
 
     sections_.clear();
+    sectionHeaderTable_.clear();
     symbols_.clear();
     relEntries_.clear();
 
@@ -61,7 +67,7 @@ void Assembler::locationAddLines(yy::location::counter_type count)
 
 int Assembler::instr(std::string instrName)
 {
-    if (section_.empty()) {
+    if (sectionName_.empty()) {
         error("instruction not in any section");
         return AE_SECTION;
     }
@@ -167,20 +173,20 @@ int Assembler::instrSecondPass(const std::string& instrName)
 {
     const InstrInfo& iInfo = INSTRUCTIONS.find(instrName)->second;
 
-    sectionData_->push_back(iInfo.opCode); // InstrDescr
+    section_->data.push_back(iInfo.opCode); // InstrDescr
     if (iInfo.numArgs == 0) // instr
         return AE_OK;
 
     if (iInfo.argAddrModes[0] == REGDIR && iInfo.argAddrModes[1] == 0) { // instr reg
         ubyte regD = *std::get_if<ushort>(&instrArgs_[0].val);
-        sectionData_->push_back(regD << 4 | 0xF); // RegDescr
+        section_->data.push_back(regD << 4 | 0xF); // RegDescr
         return AE_OK;
     }
 
     if (iInfo.argAddrModes[0] == REGDIR && iInfo.argAddrModes[1] == REGDIR) { // instr reg, reg
         ubyte regD = *std::get_if<ushort>(&instrArgs_[0].val);
         ubyte regS = *std::get_if<ushort>(&instrArgs_[1].val);
-        sectionData_->push_back(regD << 4 | regS); // RegDescr
+        section_->data.push_back(regD << 4 | regS); // RegDescr
         return AE_OK;
     }
 
@@ -233,8 +239,8 @@ int Assembler::instrSecondPass(const std::string& instrName)
         break;
     }
 
-    sectionData_->push_back(regD << 4 | regS); // RegDescr
-    sectionData_->push_back(regIndUpdate_ << 4 | addrMode); // AddrMode
+    section_->data.push_back(regD << 4 | regS); // RegDescr
+    section_->data.push_back(regIndUpdate_ << 4 | addrMode); // AddrMode
 
     // dataHigh + dataLow
     if (payload) {
@@ -338,7 +344,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
 
     const DirInfo& dInfo = dirIt->second;
 
-    if (dInfo.sectionRequired && section_.empty()) {
+    if (dInfo.sectionRequired && sectionName_.empty()) {
         syntaxError("directive not in any section: " + dirName);
         return AE_SYNTAX;
     }
@@ -423,15 +429,34 @@ int Assembler::dirFirstPass(const std::string& dirName)
         }
         break;
 
-    case SECTION:
-        // Reserve space for previous section
-        if (!section_.empty())
-            sectionData_->reserve(lc_);
+    case SECTION: {
+        endSection(); // end previous section
 
-        section_ = std::get<std::string>(dirArgs_[0]);
-        sectionData_ = &sections_[section_].data;
+        sectionName_ = std::get<std::string>(dirArgs_[0]);
+        if (sections_.find(sectionName_) != sections_.end()) {
+            error("section with the same name already declared: " + sectionName_);
+            return AE_SECTION;
+        }
+
+        section_ = &sections_[sectionName_];
         lc_ = 0;
+
+        // New section header entry
+        sectionHeaderTable_.emplace_back(
+            ST_DATA,
+            addToNamesSection(sectionName_)
+        );
+        section_->id = sectionHeaderTable_.size();
+
+        // Create section symbol (used for relocation)
+        const std::string sectionSymbolName = SECTION_PREFIX + sectionName_;
+        Symbol &sectionSymbol = symbols_[sectionSymbolName];
+        sectionSymbol.label = true;
+        sectionSymbol.defined = true;
+        sectionSymbol.section = sectionName_;
+
         break;
+    }
 
     case WORD:
         lc_ += dirArgs_.size() * 2;
@@ -459,6 +484,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
     }
 
     case END:
+        endSection();
         return AE_END;
     }
 
@@ -484,8 +510,8 @@ int Assembler::dirSecondPass(const std::string& dirName)
         break;
         
     case SECTION:
-        section_ = std::get<std::string>(dirArgs_[0]);
-        sectionData_ = &sections_[section_].data;
+        sectionName_ = std::get<std::string>(dirArgs_[0]);
+        section_ = &sections_[sectionName_];
         break;
 
     case WORD:
@@ -497,7 +523,7 @@ int Assembler::dirSecondPass(const std::string& dirName)
         break;
 
     case SKIP:
-        sectionData_->resize(sectionData_->size() + std::get<ushort>(dirArgs_[0]));
+        section_->data.resize(section_->data.size() + std::get<ushort>(dirArgs_[0]));
         break;
 
     case END:
@@ -515,7 +541,7 @@ int Assembler::dirArg(string_ushort_variant arg)
 int Assembler::label(const std::string& label)
 {
     if (pass_ == 0) {
-        if (section_.empty()) {
+        if (sectionName_.empty()) {
             error("label not in any section: " + label);
             return AE_SYMBOL;
         }
@@ -530,7 +556,7 @@ int Assembler::label(const std::string& label)
             symbol.defined = true;
             symbol.label = true;
             symbol.value = (ushort)lc_;
-            symbol.section = section_;
+            symbol.section = sectionName_;
             labeled_ = true;
         }
     }
@@ -574,13 +600,33 @@ int Assembler::processWord(string_ushort_variant &arg)
 
         // Relocation entries for labels and external symbols
         if (symbol.label || symbol.external)
-            relEntries_.emplace_back(&symbol, section_, sectionData_->size());
+            relEntries_.emplace_back(&symbol, sectionName_, section_->data.size());
     }
 
-    sectionData_->push_back(dataHigh);
-    sectionData_->push_back(dataLow);
+    section_->data.push_back(dataHigh);
+    section_->data.push_back(dataLow);
 
     return AE_OK;
+}
+
+std::size_t Assembler::addToNamesSection(const std::string &str)
+{
+    size_t pos = strData_.size();
+
+    strData_.insert(strData_.end(), str.cbegin(), str.cend());
+    strData_.emplace_back('\0');
+
+    return pos;
+}
+
+void Assembler::endSection()
+{
+    if (!sectionName_.empty()) {
+        // Set section size in header entry
+        sectionHeaderTable_[section_->id].size = lc_;
+        // Reserve space for section
+        section_->data.reserve(lc_);
+    }
 }
 
 void Assembler::syntaxError(const std::string& msg)

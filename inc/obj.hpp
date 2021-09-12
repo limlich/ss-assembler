@@ -11,7 +11,7 @@ struct ObjHeader
     ubyte shtEntrySize = sizeof(SectionEntry);
     uint shtOffset; // section header table offset in obj file
     uint shtSize; // section header table size (in entries)
-    uint strEntryId; // entry of names (.str) section in section header table
+    uint strEntryId; // entry of names section in section header table
 };
 
 #endif
