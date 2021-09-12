@@ -492,6 +492,8 @@ int Assembler::dirSecondPass(const std::string& dirName)
         break;
         
     case SECTION:
+        endSection();
+
         sectionName_ = SECTION_PREFIX + std::get<std::string>(dirArgs_[0]);
         relSectionName_ = sectionName_ + REL_SUFFIX;
         section_ = &sections_[sectionName_];
@@ -512,6 +514,7 @@ int Assembler::dirSecondPass(const std::string& dirName)
         break;
 
     case END:
+        endSection();
         fillSectionHeaderTableRel();
         return AE_END;
     }
@@ -579,10 +582,18 @@ int Assembler::processWord(string_ushort_variant &arg)
         dataLow = symbol.entry.value;
 
         // Relocation entries for labels and external symbols
+        const Symbol *sym = nullptr;
         if (symbol.isLabel())
-            section_->relEntries.emplace_back(sectionSymbol_, section_->data.size());
+            sym = &getSymbol(symbol.section);
         else if (symbol.external)
-            section_->relEntries.emplace_back(&symbol, section_->data.size());
+            sym = &symbol;
+        
+        if (sym) {
+            RelEntry relEntry(section_->data.size(), sym->id);
+            auto const relBegin = (const ubyte*)&relEntry;
+            auto const relEnd = relBegin + sizeof(RelEntry);
+            relSection_->data.insert(relSection_->data.end(), relBegin, relEnd);
+        }
     }
 
     section_->data.push_back(dataHigh);
@@ -593,14 +604,19 @@ int Assembler::processWord(string_ushort_variant &arg)
 
 void Assembler::endSection()
 {
-    if (!sectionName_.empty()) {
+    if (sectionName_.empty())
+        return;
+
+    if (pass_ == 0) {
         // Set section size in header entry
         section_->entry.size = lc_;
         // Reserve space for section
         section_->data.reserve(lc_);
         // Reset location counter
         lc_ = 0;
-    }
+    } else
+        // Set section size in header entry
+        relSection_->entry.size = relSection_->data.size();
 }
 
 void Assembler::initRelSection()

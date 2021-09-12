@@ -11,14 +11,12 @@ class Symbol;
 
 struct RelEntry
 {
-    RelEntry()
-    {}
-    RelEntry(const Symbol *symbol, ushort location) :
-        symbol(symbol), location(location)
+    RelEntry(ushort offset, uint symbolId) :
+        offset(offset), symbolId(symbolId)
     {}
 
-    const Symbol *symbol; // extern symbol or location dependent local symbol (label)
-    ushort location; // fixup address within section
+    ushort offset;
+    uint symbolId;
 };
 
 enum SymbolBind: ubyte
