@@ -93,8 +93,8 @@ private:
     SectionMap sections_;
     SectionHeaderTable sectionHeaderTable_;
     std::string sectionName_; // current section name
-    std::string sectionSymbolName_; // current section symbol name
     Section *section_; // current section
+    Symbol *sectionSymbol_; // current section symbol
 
     // Instruction data
     ubyte instrNumArgs_;

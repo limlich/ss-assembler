@@ -30,8 +30,8 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         dirArgs_.clear();
         labeled_ = false;
         sectionName_ = "";
-        sectionSymbolName_ = "";
         section_ = nullptr;
+        sectionSymbol_ = nullptr;
         lc_ = 0;
         
         res = parser_.parse();
@@ -423,7 +423,6 @@ int Assembler::dirFirstPass(const std::string& dirName)
         endSection(); // end previous section
 
         sectionName_ = std::get<std::string>(dirArgs_[0]);
-        sectionSymbolName_ = SECTION_PREFIX + sectionName_;
 
         auto sit = sections_.find(sectionName_);
         if (sit != sections_.end()) {
@@ -435,9 +434,9 @@ int Assembler::dirFirstPass(const std::string& dirName)
         lc_ = 0;
 
         // Create section symbol (used for relocation)
-        Symbol &sectionSymbol = getSymbol(sectionSymbolName_);
-        sectionSymbol.section = sectionName_;
-        sectionSymbol.entry.type = SYMT_SECTION;
+        sectionSymbol_ = &getSymbol(SECTION_PREFIX + sectionName_);
+        sectionSymbol_->section = sectionName_;
+        sectionSymbol_->entry.type = SYMT_SECTION;
         
         break;
     }
@@ -486,8 +485,8 @@ int Assembler::dirSecondPass(const std::string& dirName)
         
     case SECTION:
         sectionName_ = std::get<std::string>(dirArgs_[0]);
-        sectionSymbolName_ = SECTION_PREFIX + sectionName_;
         section_ = &sections_[sectionName_];
+        sectionSymbol_ = &getSymbol(SECTION_PREFIX + sectionName_);
         break;
 
     case WORD:
@@ -585,7 +584,7 @@ int Assembler::processWord(string_ushort_variant &arg)
 
         // Relocation entries for labels and external symbols
         if (symbol.isLabel())
-            section_->relEntries.emplace_back(&getSymbol(SECTION_PREFIX + sectionName_), section_->data.size());
+            section_->relEntries.emplace_back(sectionSymbol_, section_->data.size());
         else if (symbol.external)
             section_->relEntries.emplace_back(&symbol, section_->data.size());
     }
