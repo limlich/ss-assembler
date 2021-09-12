@@ -634,17 +634,19 @@ void Assembler::createSymbolTable()
 
         switch (symbol.entry.type) {
         case SYMT_UNDEF: // extern symbol
-            if (symbol.external)
+            if (symbol.external) {
                 symbol.entry.bind = SYMB_GLOBAL;
-            else
+                symbol.global = false;
+            } else
                 continue; // undefined exported symbol (.global) - ignore
             break;
         case SYMT_ABS:
         case SYMT_LABEL:
+            symbol.external = false;
             if (symbol.global)
                 symbol.entry.bind = SYMB_GLOBAL;
             else
-                symbol.entry.bind = SYMB_LOCAL;
+                continue; // local absolute symbols and local labels are not needed in the table
             break;
         case SYMT_SECTION:
             symbol.entry.bind = SYMB_LOCAL;
