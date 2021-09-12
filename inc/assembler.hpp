@@ -62,21 +62,24 @@ private:
     int dirFirstPass(const std::string& dirName);
     int dirSecondPass(const std::string& dirName);
 
-    int writeToFile(const std::string& outFilename);
-
     Symbol& getSymbol(const std::string &symbolName);
 
     int processWord(string_ushort_variant &arg);
 
     void endSection();
 
+    void initRelSection();
+
     void initStrSection();
-    std::size_t addToStrSection(const std::string &str);
+    std::size_t insertIntoStrSection(const std::string &str);
     void finishStrSection();
 
     void initSectionHeaderTable();
-    void createSectionHeaderTable();
-    void createSymbolTable();
+    void fillSectionHeaderTable();
+    void fillSectionHeaderTableRel();
+    void fillSymbolTable();
+
+    int writeToFile(const std::string& outFilename);
 
     void syntaxError(const std::string& msg);
     void error(const std::string& msg);
@@ -95,6 +98,9 @@ private:
     std::string sectionName_; // current section name
     Section *section_; // current section
     Symbol *sectionSymbol_; // current section symbol
+    // Relocation section
+    std::string relSectionName_;
+    Section *relSection_;
 
     // Instruction data
     ubyte instrNumArgs_;

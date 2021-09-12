@@ -30,7 +30,9 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         dirArgs_.clear();
         labeled_ = false;
         sectionName_ = "";
+        relSectionName_ = "";
         section_ = nullptr;
+        relSection_ = nullptr;
         sectionSymbol_ = nullptr;
         lc_ = 0;
         
@@ -423,6 +425,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
         endSection(); // end previous section
 
         sectionName_ = SECTION_PREFIX + std::get<std::string>(dirArgs_[0]);
+        relSectionName_ = sectionName_ + REL_SUFFIX;
 
         auto sit = sections_.find(sectionName_);
         if (sit != sections_.end()) {
@@ -430,8 +433,10 @@ int Assembler::dirFirstPass(const std::string& dirName)
             return AE_SECTION;
         }
 
+        initRelSection();
+
         section_ = &sections_[sectionName_];
-        lc_ = 0;
+        relSection_ = &sections_[relSectionName_];
 
         section_->entry.type = ST_DATA;
 
@@ -467,8 +472,8 @@ int Assembler::dirFirstPass(const std::string& dirName)
 
     case END:
         endSection();
-        createSectionHeaderTable();
-        createSymbolTable();
+        fillSectionHeaderTable();
+        fillSymbolTable();
         finishStrSection();
         return AE_END;
     }
@@ -488,7 +493,9 @@ int Assembler::dirSecondPass(const std::string& dirName)
         
     case SECTION:
         sectionName_ = SECTION_PREFIX + std::get<std::string>(dirArgs_[0]);
+        relSectionName_ = sectionName_ + REL_SUFFIX;
         section_ = &sections_[sectionName_];
+        relSection_ = &sections_[relSectionName_];
         sectionSymbol_ = &getSymbol(sectionName_);
         break;
 
@@ -505,6 +512,7 @@ int Assembler::dirSecondPass(const std::string& dirName)
         break;
 
     case END:
+        fillSectionHeaderTableRel();
         return AE_END;
     }
 
@@ -534,21 +542,6 @@ int Assembler::label(const std::string& label)
             labeled_ = true;
         }
     }
-
-    return AE_OK;
-}
-
-int Assembler::writeToFile(const std::string& outFilename)
-{
-    std::ofstream outFile(outFilename, std::ios_base::binary);
-    if (!outFile.is_open()) {
-        std::cout << "Cannot open file for writing: " << outFilename << std::endl;
-        return AE_FILE;
-    }
-
-    // TODO:
-
-    outFile.close();
 
     return AE_OK;
 }
@@ -605,26 +598,24 @@ void Assembler::endSection()
         section_->entry.size = lc_;
         // Reserve space for section
         section_->data.reserve(lc_);
+        // Reset location counter
+        lc_ = 0;
     }
+}
+
+void Assembler::initRelSection()
+{
+    sections_[relSectionName_] = Section(ST_REL);
 }
 
 void Assembler::initStrSection()
 {
     // Insert names section so access to it doesn't cause reallocation
     // of section map and invalidate section pointers
-    Section strSection;
-    strSection.entry.type = ST_STR;
-    strSection.entry.nameOffset = 0;
-
-    strSection.data.reserve(STR_SECTION.size() + 1);
-    for (char c : STR_SECTION)
-        strSection.data.emplace_back((ubyte)c);
-    strSection.data.emplace_back('\0');
-
-    sections_[STR_SECTION] = strSection;
+    sections_[STR_SECTION] = Section(ST_STR);
 }
 
-std::size_t Assembler::addToStrSection(const std::string &str)
+std::size_t Assembler::insertIntoStrSection(const std::string &str)
 {
     Section &strSection = sections_[STR_SECTION];
     std::size_t pos = strSection.data.size();
@@ -644,21 +635,34 @@ void Assembler::finishStrSection()
 void Assembler::initSectionHeaderTable()
 {
     // Invalid section
-    sectionHeaderTable_.emplace_back(ST_NONE, 0);
+    sectionHeaderTable_.emplace_back(ST_NONE);
 }
 
-void Assembler::createSectionHeaderTable()
+void Assembler::fillSectionHeaderTable()
 {
     sectionHeaderTable_.reserve(sections_.size());
 
     for (auto& [sectionName, section] : sections_) {
+        if (section.entry.type != ST_STR && section.entry.size == 0)
+            continue;
         section.id = sectionHeaderTable_.size();
-        section.entry.nameOffset = addToStrSection(sectionName);
+        section.entry.nameOffset = insertIntoStrSection(sectionName);
         sectionHeaderTable_.push_back(section.entry);
     }
 }
 
-void Assembler::createSymbolTable()
+void Assembler::fillSectionHeaderTableRel()
+{
+    for (auto& [sectionName, section] : sections_) {
+        if (section.entry.type != ST_REL || section.entry.size == 0)
+            continue;
+        section.id = sectionHeaderTable_.size();
+        section.entry.nameOffset = insertIntoStrSection(sectionName);
+        sectionHeaderTable_.push_back(section.entry);
+    }
+}
+
+void Assembler::fillSymbolTable()
 {
     symbolTable_.reserve(symbols_.size());
 
@@ -690,13 +694,29 @@ void Assembler::createSymbolTable()
         }
 
         if (symbol.entry.type != SYMT_SECTION)
-            symbol.entry.nameOffset = addToStrSection(symbolName);
+            symbol.entry.nameOffset = insertIntoStrSection(symbolName);
         else
             symbol.entry.nameOffset = sectionHeaderTable_[symbol.entry.sectionEntryId].nameOffset;
 
         symbolTable_.push_back(symbol.entry);
     }
 }
+
+int Assembler::writeToFile(const std::string& outFilename)
+{
+    std::ofstream outFile(outFilename, std::ios_base::binary);
+    if (!outFile.is_open()) {
+        std::cout << "Cannot open file for writing: " << outFilename << std::endl;
+        return AE_FILE;
+    }
+
+    // TODO:
+
+    outFile.close();
+
+    return AE_OK;
+}
+
 
 void Assembler::syntaxError(const std::string& msg)
 {

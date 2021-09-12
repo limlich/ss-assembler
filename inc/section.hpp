@@ -22,11 +22,8 @@ const std::string SECTION_PREFIX = "."; // section symbol prefix
 
 struct SectionEntry
 {
-    SectionEntry() :
-        type(ST_NONE)
-    {}
-    SectionEntry(SectionType type, ushort nameOffset) :
-        type(type), nameOffset(nameOffset), dataOffset(0), size(0)
+    SectionEntry(SectionType type = ST_NONE) :
+        type(type), nameOffset(0), dataOffset(0), size(0)
     {}
 
     SectionType type;
@@ -39,6 +36,9 @@ struct Section
 {
     Section() :
         id(0)
+    {}
+    Section(SectionType type) :
+        entry(type)
     {}
 
     SectionEntry entry;
