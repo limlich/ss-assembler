@@ -437,7 +437,6 @@ int Assembler::dirFirstPass(const std::string& dirName)
         // Create section symbol (used for relocation)
         Symbol &sectionSymbol = getSymbol(sectionSymbolName_);
         sectionSymbol.section = sectionName_;
-        sectionSymbol.entry.bind = SYMB_LOCAL;
         sectionSymbol.entry.type = SYMT_SECTION;
         
         break;
@@ -628,7 +627,33 @@ void Assembler::createSectionHeaderTable()
 
 void Assembler::createSymbolTable()
 {
-    // TODO:
+    for (auto &[symbolName, symbol] : symbols_) {
+        symbol.id = symbolTable_.size();
+
+        if (!symbol.section.empty())
+            symbol.entry.sectionEntryId = sections_[symbol.section].id;
+
+        switch (symbol.entry.type) {
+        case SYMT_UNDEF: // extern symbol
+            if (symbol.external)
+                symbol.entry.bind = SYMB_GLOBAL;
+            else
+                continue; // undefined exported symbol (.global) - ignore
+            break;
+        case SYMT_ABS:
+        case SYMT_LABEL:
+            if (symbol.global)
+                symbol.entry.bind = SYMB_GLOBAL;
+            else
+                symbol.entry.bind = SYMB_LOCAL;
+            break;
+        case SYMT_SECTION:
+            symbol.entry.bind = SYMB_LOCAL;
+            break;
+        }
+
+        symbolTable_.push_back(symbol.entry);
+    }
 }
 
 void Assembler::syntaxError(const std::string& msg)
