@@ -22,10 +22,40 @@ struct RelEntry
     ushort location; // fixup address within section
 };
 
+enum SymbolBind: ubyte
+{
+    SYMB_LOCAL,
+    SYMB_GLOBAL
+};
+
+enum SymbolType: ubyte
+{
+    SYMT_UNDEF,  // external symbols
+    SYMT_ABS,    // no relocation
+    SYMT_LABEL,  // relocatable
+    SYMT_SECTION // section names for relocation (LOCAL binding)
+};
+
+struct SymbolEntry
+{
+    SymbolEntry() :
+        type(SYMT_UNDEF)
+    {}
+    SymbolEntry(SymbolBind bind, SymbolType type, ushort value, uint nameOffset, uint sectionEntryId) :
+        bind(bind), type(type), value(value), nameOffset(nameOffset), sectionEntryId(sectionEntryId)
+    {}
+
+    SymbolBind bind;
+    SymbolType type;
+    ushort value;
+    uint nameOffset;
+    uint sectionEntryId;
+};
+
 struct Symbol
 {
     Symbol() :
-        global(false), external(false), label(false), defined(false), value(0x00u), section("")
+        global(false), external(false), label(false), defined(false), value(0x00u), section(""), entry(nullptr)
     {}
 
     bool global; // .global
@@ -34,6 +64,7 @@ struct Symbol
     bool defined;
     ushort value;
     std::string section;
+    SymbolEntry *entry;
 };
 
 typedef std::unordered_map<std::string, Symbol> SymbolTable;
