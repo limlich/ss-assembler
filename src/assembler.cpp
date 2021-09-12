@@ -422,7 +422,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
     case SECTION: {
         endSection(); // end previous section
 
-        sectionName_ = std::get<std::string>(dirArgs_[0]);
+        sectionName_ = SECTION_PREFIX + std::get<std::string>(dirArgs_[0]);
 
         auto sit = sections_.find(sectionName_);
         if (sit != sections_.end()) {
@@ -433,8 +433,10 @@ int Assembler::dirFirstPass(const std::string& dirName)
         section_ = &sections_[sectionName_];
         lc_ = 0;
 
+        section_->entry.type = ST_DATA;
+
         // Create section symbol (used for relocation)
-        sectionSymbol_ = &getSymbol(SECTION_PREFIX + sectionName_);
+        sectionSymbol_ = &getSymbol(sectionName_);
         sectionSymbol_->section = sectionName_;
         sectionSymbol_->entry.type = SYMT_SECTION;
         
@@ -467,6 +469,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
         endSection();
         createSectionHeaderTable();
         createSymbolTable();
+        finishStrSection();
         return AE_END;
     }
 
@@ -484,9 +487,9 @@ int Assembler::dirSecondPass(const std::string& dirName)
         break;
         
     case SECTION:
-        sectionName_ = std::get<std::string>(dirArgs_[0]);
+        sectionName_ = SECTION_PREFIX + std::get<std::string>(dirArgs_[0]);
         section_ = &sections_[sectionName_];
-        sectionSymbol_ = &getSymbol(SECTION_PREFIX + sectionName_);
+        sectionSymbol_ = &getSymbol(sectionName_);
         break;
 
     case WORD:
@@ -595,17 +598,6 @@ int Assembler::processWord(string_ushort_variant &arg)
     return AE_OK;
 }
 
-std::size_t Assembler::addToStrSection(const std::string &str)
-{
-    Section &strSection = sections_[STR_SECTION];
-    std::size_t pos = strSection.data.size();
-
-    strSection.data.insert(strSection.data.end(), str.cbegin(), str.cend());
-    strSection.data.emplace_back('\0');
-
-    return pos;
-}
-
 void Assembler::endSection()
 {
     if (!sectionName_.empty()) {
@@ -614,12 +606,6 @@ void Assembler::endSection()
         // Reserve space for section
         section_->data.reserve(lc_);
     }
-}
-
-void Assembler::initSectionHeaderTable()
-{
-    // Invalid section
-    sectionHeaderTable_.emplace_back(ST_NONE, 0);
 }
 
 void Assembler::initStrSection()
@@ -638,8 +624,33 @@ void Assembler::initStrSection()
     sections_[STR_SECTION] = strSection;
 }
 
+std::size_t Assembler::addToStrSection(const std::string &str)
+{
+    Section &strSection = sections_[STR_SECTION];
+    std::size_t pos = strSection.data.size();
+
+    strSection.data.insert(strSection.data.end(), str.cbegin(), str.cend());
+    strSection.data.emplace_back('\0');
+
+    return pos;
+}
+
+void Assembler::finishStrSection()
+{
+    Section &strSection = sections_[STR_SECTION];
+    sectionHeaderTable_[strSection.id].size = strSection.entry.size = strSection.data.size();
+}
+
+void Assembler::initSectionHeaderTable()
+{
+    // Invalid section
+    sectionHeaderTable_.emplace_back(ST_NONE, 0);
+}
+
 void Assembler::createSectionHeaderTable()
 {
+    sectionHeaderTable_.reserve(sections_.size());
+
     for (auto& [sectionName, section] : sections_) {
         section.id = sectionHeaderTable_.size();
         section.entry.nameOffset = addToStrSection(sectionName);
@@ -649,6 +660,8 @@ void Assembler::createSectionHeaderTable()
 
 void Assembler::createSymbolTable()
 {
+    symbolTable_.reserve(symbols_.size());
+
     for (auto& [symbolName, symbol] : symbols_) {
         symbol.id = symbolTable_.size();
 
@@ -676,7 +689,11 @@ void Assembler::createSymbolTable()
             break;
         }
 
-        symbol.entry.nameOffset = addToStrSection(symbolName);
+        if (symbol.entry.type != SYMT_SECTION)
+            symbol.entry.nameOffset = addToStrSection(symbolName);
+        else
+            symbol.entry.nameOffset = sectionHeaderTable_[symbol.entry.sectionEntryId].nameOffset;
+
         symbolTable_.push_back(symbol.entry);
     }
 }

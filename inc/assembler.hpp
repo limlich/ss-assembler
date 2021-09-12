@@ -72,6 +72,7 @@ private:
 
     void initStrSection();
     std::size_t addToStrSection(const std::string &str);
+    void finishStrSection();
 
     void initSectionHeaderTable();
     void createSectionHeaderTable();
