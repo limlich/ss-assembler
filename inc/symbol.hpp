@@ -16,7 +16,7 @@ struct RelEntry
     {}
 
     ushort offset;
-    uint symbolId;
+    ushort symbolId;
 };
 
 enum SymbolBind: ubyte

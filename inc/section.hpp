@@ -43,7 +43,7 @@ struct Section
 
     SectionEntry entry;
     std::vector<ubyte> data;
-    uint id; // section header table entry index
+    ushort id; // section header table entry index
 };
 
 typedef std::unordered_map<std::string, Section> SectionMap;
