@@ -13,12 +13,11 @@ struct RelEntry
 {
     RelEntry()
     {}
-    RelEntry(const Symbol *symbol, const std::string& section, ushort location) :
-        symbol(symbol), section(section), location(location)
+    RelEntry(const Symbol *symbol, ushort location) :
+        symbol(symbol), location(location)
     {}
 
     const Symbol *symbol; // extern symbol or location dependent local symbol (label)
-    std::string section; // fixup section name
     ushort location; // fixup address within section
 };
 
@@ -39,19 +38,11 @@ enum SymbolType: ubyte
 struct SymbolEntry
 {
     SymbolEntry() :
-        bind(SYMB_LOCAL), type(SYMT_UNDEF)
+        bind(SYMB_LOCAL), type(SYMT_UNDEF), value(0)
     {}
     SymbolEntry(SymbolBind bind, SymbolType type, ushort value, uint nameOffset, uint sectionEntryId) :
         bind(bind), type(type), value(value), nameOffset(nameOffset), sectionEntryId(sectionEntryId)
     {}
-
-    bool declared() const { return !(bind == SYMB_LOCAL && type == SYMT_UNDEF); }
-    bool external() const { return bind == SYMB_GLOBAL && type == SYMT_UNDEF; }
-    bool global() const { return bind == SYMB_GLOBAL && type != SYMT_UNDEF; }
-    bool undef() const { return bind != SYMB_LOCAL && type == SYMT_UNDEF; }
-    bool abs() const { return type == SYMT_ABS; }
-    bool label() const { return type == SYMT_LABEL; }
-    bool section() const { return type == SYMT_SECTION; }
 
     SymbolBind bind;
     SymbolType type;
@@ -63,14 +54,18 @@ struct SymbolEntry
 struct Symbol
 {
     Symbol() :
-        global(false), external(false), label(false), defined(false), value(0x00u), section(""), id(0)
+        global(false), external(false), section(""), id(0)
     {}
 
-    bool global; // .global
-    bool external; // .extern
-    bool label; // location dependent
-    bool defined;
-    ushort value;
+    bool isDeclared() const { return !(entry.bind == SYMB_LOCAL && entry.type == SYMT_UNDEF); }
+    bool isDefined() const { return entry.type != SYMT_UNDEF; }
+    bool isAbs() const { return entry.type == SYMT_ABS; }
+    bool isLabel() const { return entry.type == SYMT_LABEL; }
+    bool isSection() const { return entry.type == SYMT_SECTION; }
+
+    bool global;
+    bool external;
+    SymbolEntry entry;
     std::string section;
     uint id; // symbol table entry id
 };

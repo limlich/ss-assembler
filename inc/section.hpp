@@ -41,6 +41,7 @@ struct Section
         id(0)
     {}
 
+    SectionEntry entry;
     std::vector<ubyte> data;
     std::vector<RelEntry> relEntries;
     uint id; // section header table entry index

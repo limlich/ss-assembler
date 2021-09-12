@@ -64,11 +64,16 @@ private:
 
     int writeToFile(const std::string& outFilename);
 
+    Symbol& getSymbol(const std::string &symbolName);
+
     int processWord(string_ushort_variant &arg);
 
     std::size_t addToNamesSection(const std::string &str);
 
     void endSection();
+
+    void createSectionHeaderTable();
+    void createSymbolTable();
 
     void syntaxError(const std::string& msg);
     void error(const std::string& msg);
@@ -88,6 +93,7 @@ private:
     SectionMap sections_;
     SectionHeaderTable sectionHeaderTable_;
     std::string sectionName_; // current section name
+    std::string sectionSymbolName_; // current section symbol name
     Section *section_; // current section
 
     // Instruction data
@@ -101,9 +107,7 @@ private:
     // Symbols
     bool labeled_;
     SymbolMap symbols_;
-
-    // Relocation entries
-    std::vector<RelEntry> relEntries_;
+    SymbolTable symbolTable_;
 };
 
 #endif

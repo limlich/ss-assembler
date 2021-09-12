@@ -30,6 +30,7 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         dirArgs_.clear();
         labeled_ = false;
         sectionName_ = "";
+        sectionSymbolName_ = "";
         section_ = nullptr;
         lc_ = 0;
         
@@ -50,7 +51,7 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
     sections_.clear();
     sectionHeaderTable_.clear();
     symbols_.clear();
-    relEntries_.clear();
+    symbolTable_.clear();
 
     return res;
 }
@@ -405,27 +406,16 @@ int Assembler::dirFirstPass(const std::string& dirName)
     case GLOBAL:
         for (uint i = 0; i < dirArgs_.size(); ++i) {
             const std::string &symbolName = std::get<std::string>(dirArgs_[i]);
-            Symbol &symbol = symbols_[symbolName];
-            if (symbol.external) {
-                error("symbol already declared as extern: " + symbolName);
-                return AE_SYMBOL;
-            } else // symbol declaration
-                symbol.global = true;
+            Symbol &symbol = getSymbol(symbolName);
+            symbol.global = true;
         }
         break;
 
     case EXTERN:
         for (uint i = 0; i < dirArgs_.size(); ++i) {
             const std::string &symbolName = std::get<std::string>(dirArgs_[i]);
-            Symbol &symbol = symbols_[symbolName];
-            if (symbol.defined) {
-                error("symbol already defined: " + symbolName);
-                return AE_SYMBOL;
-            } else if (symbol.global) {
-                error("symbol already declared as global: " + symbolName);
-                return AE_SYMBOL;
-            } else // symbol declaration
-                symbol.external = true;
+            Symbol &symbol = getSymbol(symbolName);
+            symbol.external = true;
         }
         break;
 
@@ -433,28 +423,23 @@ int Assembler::dirFirstPass(const std::string& dirName)
         endSection(); // end previous section
 
         sectionName_ = std::get<std::string>(dirArgs_[0]);
-        if (sections_.find(sectionName_) != sections_.end()) {
-            error("section with the same name already declared: " + sectionName_);
+        sectionSymbolName_ = SECTION_PREFIX + sectionName_;
+
+        auto sit = sections_.find(sectionName_);
+        if (sit != sections_.end()) {
+            error("section with the same name already declared in this file: " + sectionName_);
             return AE_SECTION;
         }
 
         section_ = &sections_[sectionName_];
         lc_ = 0;
 
-        // New section header entry
-        sectionHeaderTable_.emplace_back(
-            ST_DATA,
-            addToNamesSection(sectionName_)
-        );
-        section_->id = sectionHeaderTable_.size();
-
         // Create section symbol (used for relocation)
-        const std::string sectionSymbolName = SECTION_PREFIX + sectionName_;
-        Symbol &sectionSymbol = symbols_[sectionSymbolName];
-        sectionSymbol.label = true;
-        sectionSymbol.defined = true;
+        Symbol &sectionSymbol = getSymbol(sectionSymbolName_);
         sectionSymbol.section = sectionName_;
-
+        sectionSymbol.entry.bind = SYMB_LOCAL;
+        sectionSymbol.entry.type = SYMT_SECTION;
+        
         break;
     }
 
@@ -469,22 +454,21 @@ int Assembler::dirFirstPass(const std::string& dirName)
     case EQU: {
         const std::string &symbolName = std::get<std::string>(dirArgs_[0]);
         ushort literal = std::get<ushort>(dirArgs_[1]);
-        Symbol &symbol = symbols_[symbolName];
-        if (symbol.defined) {
+        Symbol &symbol = getSymbol(symbolName);
+        if (symbol.isDefined()) {
             error("symbol already defined: " + symbolName);
             return AE_SYMBOL;
-        } else if (symbol.external) {
-            error("symbol already declared as extern: " + symbolName);
-            return AE_SYMBOL;
         } else { // symbol definition
-            symbol.defined = true;
-            symbol.value = literal;
+            symbol.entry.type = SYMT_ABS;
+            symbol.entry.value = literal;
         }
         break;
     }
 
     case END:
         endSection();
+        createSectionHeaderTable();
+        createSymbolTable();
         return AE_END;
     }
 
@@ -496,21 +480,14 @@ int Assembler::dirSecondPass(const std::string& dirName)
 
     // Directives
     switch (dInfo.dir) {
+    case GLOBAL:
     case EXTERN:
     case EQU:
-        break;
-
-    case GLOBAL:
-        for (uint i = 0; i < dirArgs_.size(); ++i) {
-            std::string symbolName = std::get<std::string>(dirArgs_[i]);
-            Symbol &symbol = symbols_[symbolName];
-            if (!symbol.defined) // undefined exported symbol
-                warning("undefined global symbol: " + symbolName);
-        }
         break;
         
     case SECTION:
         sectionName_ = std::get<std::string>(dirArgs_[0]);
+        sectionSymbolName_ = SECTION_PREFIX + sectionName_;
         section_ = &sections_[sectionName_];
         break;
 
@@ -545,18 +522,14 @@ int Assembler::label(const std::string& label)
             error("label not in any section: " + label);
             return AE_SYMBOL;
         }
-        Symbol &symbol = symbols_[label];
-        if (symbol.defined) {
+        Symbol &symbol = getSymbol(label);
+        if (symbol.isDefined()) {
             error("symbol already defined: " + label);
             return AE_SYMBOL;
-        } else if (symbol.external) {
-            error("symbol already declared as extern: " + label);
-            return AE_SYMBOL;
         } else { // symbol definition
-            symbol.defined = true;
-            symbol.label = true;
-            symbol.value = (ushort)lc_;
             symbol.section = sectionName_;
+            symbol.entry.type = SYMT_LABEL;
+            symbol.entry.value = (ushort)lc_;
             labeled_ = true;
         }
     }
@@ -579,6 +552,19 @@ int Assembler::writeToFile(const std::string& outFilename)
     return AE_OK;
 }
 
+Symbol& Assembler::getSymbol(const std::string &symbolName)
+{
+    auto sit = symbols_.find(symbolName);
+    if (sit != symbols_.end())
+        return sit->second;
+
+    // new symbol
+    Symbol &symbol = symbols_[symbolName];
+    symbol.section = sectionName_;
+
+    return symbol;
+}
+
 int Assembler::processWord(string_ushort_variant &arg)
 {
     ubyte dataHigh, dataLow;
@@ -589,18 +575,20 @@ int Assembler::processWord(string_ushort_variant &arg)
         dataLow = *literal;
     } else {
         const std::string &symbolName = std::get<std::string>(arg);
-        const Symbol &symbol = symbols_[symbolName];
-        if (!symbol.defined && !symbol.external) {
+        const Symbol &symbol = getSymbol(symbolName);
+        if (!symbol.isDeclared()) {
             error("undeclared symbol " + symbolName);
             return AE_SYMBOL;
         }
 
-        dataHigh = symbol.value >> 8;
-        dataLow = symbol.value;
+        dataHigh = symbol.entry.value >> 8;
+        dataLow = symbol.entry.value;
 
         // Relocation entries for labels and external symbols
-        if (symbol.label || symbol.external)
-            relEntries_.emplace_back(&symbol, sectionName_, section_->data.size());
+        if (symbol.isLabel())
+            section_->relEntries.emplace_back(&getSymbol(SECTION_PREFIX + sectionName_), section_->data.size());
+        else if (symbol.external)
+            section_->relEntries.emplace_back(&symbol, section_->data.size());
     }
 
     section_->data.push_back(dataHigh);
@@ -623,10 +611,24 @@ void Assembler::endSection()
 {
     if (!sectionName_.empty()) {
         // Set section size in header entry
-        sectionHeaderTable_[section_->id].size = lc_;
+        section_->entry.size = lc_;
         // Reserve space for section
         section_->data.reserve(lc_);
     }
+}
+
+void Assembler::createSectionHeaderTable()
+{
+    for (auto &[sectionName, section] : sections_) {
+        section.id = sectionHeaderTable_.size();
+        section.entry.nameOffset = addToNamesSection(sectionName_);
+        sectionHeaderTable_.push_back(section.entry);
+    }
+}
+
+void Assembler::createSymbolTable()
+{
+    // TODO:
 }
 
 void Assembler::syntaxError(const std::string& msg)
