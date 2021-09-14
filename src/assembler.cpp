@@ -584,9 +584,7 @@ int Assembler::processWord(string_ushort_variant &arg)
         if (symbol.label()) {
             relEntry.symbolId = getSectionSymbol(symbol.section).id;
             rel = true;
-        } else if (pcRel_ && symbol.abs())
-            relEntry.symbolId = getSectionSymbol(sectionName_).id;
-        else if (symbol.external) {
+        } else if (symbol.external) {
             relEntry.symbolId = symbol.id;
             rel = true;
         }
