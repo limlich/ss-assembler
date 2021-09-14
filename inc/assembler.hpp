@@ -1,8 +1,7 @@
 #ifndef ASSEMBLER_H
 #define ASSEMBLER_H
 
-#include <unordered_map>
-#include <variant>
+#include <fstream>
 #include <vector>
 #include <string>
 
@@ -19,7 +18,6 @@ enum AssemblerExitCode: int
 {
     AE_OK = 0,
     AE_SYNTAX = 1, // syntax error
-    AE_END, // .end directive
     AE_FILE, // file errors (cannot open file, no file provided...)
     AE_SYMBOL, // symbol errors (multiple definition, not defined...)
     AE_SECTION, // section errors (no section, multiple definition)
@@ -79,8 +77,6 @@ private:
     void fillSectionHeaderTableRel();
     void fillSymbolTable();
 
-    int writeToFile(const std::string& outFilename);
-
     void syntaxError(const std::string& msg);
     void error(const std::string& msg);
     void warning(const std::string& msg);
@@ -89,8 +85,11 @@ private:
     yy::Parser parser_;
     yy::location location_;
 
+    std::ofstream outFile_;
+
     ubyte pass_;
     uint lc_;
+    bool endDir_;
 
     // Section
     SectionMap sections_;

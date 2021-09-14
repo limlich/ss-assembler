@@ -1,7 +1,7 @@
 #include "assembler.hpp"
 
 #include <iostream>
-#include <fstream>
+#include <cstdio>
 
 Assembler::Assembler() :
     lexer_(), parser_(lexer_, *this)
@@ -14,6 +14,12 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         std::cout << "Cannot open file: " << inFilename << std::endl;
         return AE_FILE;
     }
+    outFile_.open(outFilename, std::ios_base::binary);
+    if (!outFile_.is_open()) {
+        inFile.close();
+        std::cout << "Cannot open file for writing: " << outFilename << std::endl;
+        return AE_FILE;
+    }
 
     lexer_.switch_streams(&inFile);
 
@@ -22,13 +28,14 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
     initSectionHeaderTable();
     initStrSection();
 
-    for (pass_ = 0; pass_ < 2 && res == AE_OK; ++pass_) {
+    for (pass_ = 0; pass_ < 2; ++pass_) {
         inFile.seekg(0);
         location_.initialize(&inFilename);
 
         instrNumArgs_ = 0;
         dirArgs_.clear();
         labeled_ = false;
+        endDir_ = false;
         sectionName_ = "";
         relSectionName_ = "";
         section_ = nullptr;
@@ -37,18 +44,20 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         lc_ = 0;
         
         res = parser_.parse();
-        if (res == AE_END)
-            res = AE_OK;
-        else if (res == AE_OK)
+
+        if (res != AE_OK)
+            break;
+
+        if (!endDir_)
             dir("end"); // implicit .end
     }
 
     location_.initialize();
     lexer_.switch_streams();
     inFile.close();
-
-    if (res == AE_OK)
-        res = writeToFile(outFilename);
+    outFile_.close();
+    if (res != AE_OK)
+        std::remove(outFilename.c_str());
 
     sections_.clear();
     sectionHeaderTable_.clear();
@@ -475,7 +484,9 @@ int Assembler::dirFirstPass(const std::string& dirName)
         fillSectionHeaderTable();
         fillSymbolTable();
         finishStrSection();
-        return AE_END;
+
+        endDir_ = true;
+        break;
     }
 
     return AE_OK;
@@ -516,7 +527,9 @@ int Assembler::dirSecondPass(const std::string& dirName)
     case END:
         endSection();
         fillSectionHeaderTableRel();
-        return AE_END;
+
+        endDir_ = true;
+        break;
     }
 
     return AE_OK;
@@ -717,22 +730,6 @@ void Assembler::fillSymbolTable()
         symbolTable_.push_back(symbol.entry);
     }
 }
-
-int Assembler::writeToFile(const std::string& outFilename)
-{
-    std::ofstream outFile(outFilename, std::ios_base::binary);
-    if (!outFile.is_open()) {
-        std::cout << "Cannot open file for writing: " << outFilename << std::endl;
-        return AE_FILE;
-    }
-
-    // TODO:
-
-    outFile.close();
-
-    return AE_OK;
-}
-
 
 void Assembler::syntaxError(const std::string& msg)
 {
