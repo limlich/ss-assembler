@@ -13,11 +13,13 @@
 #include "register.hpp"
 #include "symbol.hpp"
 #include "types.hpp"
+#include "obj.hpp"
 
 enum AssemblerExitCode: int
 {
     AE_OK = 0,
     AE_SYNTAX = 1, // syntax error
+    AE_END, // .end directive
     AE_FILE, // file errors (cannot open file, no file provided...)
     AE_SYMBOL, // symbol errors (multiple definition, not defined...)
     AE_SECTION, // section errors (no section, multiple definition)
@@ -61,21 +63,27 @@ private:
     int dirSecondPass(const std::string& dirName);
 
     Symbol& getSymbol(const std::string &symbolName);
+    const Symbol& getSectionSymbol(const std::string &sectionName);
 
     int processWord(string_ushort_variant &arg);
 
-    void endSection();
+    void writeObjHeader();
 
     void initRelSection();
 
+    void initSymbolTable();
+    void insertSymbolTableEntry(Symbol &symbol);
+    void endSymbolTable();
+
     void initStrSection();
-    std::size_t insertIntoStrSection(const std::string &str);
-    void finishStrSection();
+    std::size_t insertStrSectionEntry(const std::string &str);
+    void endStrSection();
 
     void initSectionHeaderTable();
-    void fillSectionHeaderTable();
-    void fillSectionHeaderTableRel();
-    void fillSymbolTable();
+    void endSectionHeaderTable();
+    void endSection();
+    void insertSectionTableEntry(const std::string &sectionName, Section &section, ushort size = 0);
+    void writeSection(Section &section);
 
     void syntaxError(const std::string& msg);
     void error(const std::string& msg);
@@ -91,12 +99,13 @@ private:
     uint lc_;
     bool endDir_;
 
+    ObjHeader objHeader_;
+
     // Section
     SectionMap sections_;
     SectionHeaderTable sectionHeaderTable_;
     std::string sectionName_; // current section name
     Section *section_; // current section
-    Symbol *sectionSymbol_; // current section symbol
     // Relocation section
     std::string relSectionName_;
     Section *relSection_;
@@ -105,6 +114,7 @@ private:
     ubyte instrNumArgs_;
     InstrArg instrArgs_[2];
     RegIndUpdateType regIndUpdate_;
+    bool pcRel_;
 
     // Directive data
     std::vector<string_ushort_variant> dirArgs_;
@@ -112,7 +122,6 @@ private:
     // Symbols
     bool labeled_;
     SymbolMap symbols_;
-    SymbolTable symbolTable_;
 };
 
 #endif

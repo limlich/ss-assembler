@@ -25,7 +25,9 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
 
     int res = AE_OK;
 
+    writeObjHeader();
     initSectionHeaderTable();
+    initSymbolTable();
     initStrSection();
 
     for (pass_ = 0; pass_ < 2; ++pass_) {
@@ -40,16 +42,16 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         relSectionName_ = "";
         section_ = nullptr;
         relSection_ = nullptr;
-        sectionSymbol_ = nullptr;
         lc_ = 0;
         
         res = parser_.parse();
 
-        if (res != AE_OK)
-            break;
-
-        if (!endDir_)
+        if (res != AE_END) {
+            if (res != AE_OK)
+                break;
             dir("end"); // implicit .end
+        } else
+            res = AE_OK;
     }
 
     location_.initialize();
@@ -62,7 +64,6 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
     sections_.clear();
     sectionHeaderTable_.clear();
     symbols_.clear();
-    symbolTable_.clear();
 
     return res;
 }
@@ -114,6 +115,7 @@ int Assembler::instr(std::string instrName)
     
     instrNumArgs_ = 0;
     labeled_ = false;
+    pcRel_ = false;
 
     return res;
 
@@ -287,6 +289,7 @@ int Assembler::instrArgPCRel(const std::string& sym)
     instrArgs_[instrNumArgs_].val = PC_REGISTER;
     instrArgs_[instrNumArgs_].off = sym;
     instrNumArgs_++;
+    pcRel_ = true;
     return AE_OK;
 }
 int Assembler::instrArgRegDir(const std::string& reg, bool jmpSyntax)
@@ -449,11 +452,6 @@ int Assembler::dirFirstPass(const std::string& dirName)
 
         section_->entry.type = ST_DATA;
 
-        // Create section symbol (used for relocation)
-        sectionSymbol_ = &getSymbol(sectionName_);
-        sectionSymbol_->section = sectionName_;
-        sectionSymbol_->entry.type = SYMT_SECTION;
-        
         break;
     }
 
@@ -469,10 +467,11 @@ int Assembler::dirFirstPass(const std::string& dirName)
         const std::string &symbolName = std::get<std::string>(dirArgs_[0]);
         ushort literal = std::get<ushort>(dirArgs_[1]);
         Symbol &symbol = getSymbol(symbolName);
-        if (symbol.isDefined()) {
+        if (symbol.defined()) {
             error("symbol already defined: " + symbolName);
             return AE_SYMBOL;
         } else { // symbol definition
+            symbol.external = false;
             symbol.entry.type = SYMT_ABS;
             symbol.entry.value = literal;
         }
@@ -481,12 +480,8 @@ int Assembler::dirFirstPass(const std::string& dirName)
 
     case END:
         endSection();
-        fillSectionHeaderTable();
-        fillSymbolTable();
-        finishStrSection();
-
         endDir_ = true;
-        break;
+        return AE_END;
     }
 
     return AE_OK;
@@ -509,7 +504,6 @@ int Assembler::dirSecondPass(const std::string& dirName)
         relSectionName_ = sectionName_ + REL_SUFFIX;
         section_ = &sections_[sectionName_];
         relSection_ = &sections_[relSectionName_];
-        sectionSymbol_ = &getSymbol(sectionName_);
         break;
 
     case WORD:
@@ -526,10 +520,12 @@ int Assembler::dirSecondPass(const std::string& dirName)
 
     case END:
         endSection();
-        fillSectionHeaderTableRel();
-
+        endSymbolTable();
+        endStrSection();
+        endSectionHeaderTable();
+        writeObjHeader();
         endDir_ = true;
-        break;
+        return AE_END;
     }
 
     return AE_OK;
@@ -548,16 +544,62 @@ int Assembler::label(const std::string& label)
             return AE_SYMBOL;
         }
         Symbol &symbol = getSymbol(label);
-        if (symbol.isDefined()) {
+        if (symbol.defined()) {
             error("symbol already defined: " + label);
             return AE_SYMBOL;
         } else { // symbol definition
+            symbol.external = false;
             symbol.section = sectionName_;
             symbol.entry.type = SYMT_LABEL;
             symbol.entry.value = (ushort)lc_;
             labeled_ = true;
         }
+    } else
+        getSymbol(label).entry.sectionEntryId = section_->id;
+
+    return AE_OK;
+}
+
+int Assembler::processWord(string_ushort_variant &arg)
+{
+    ushort value;
+    ushort *literal = std::get_if<ushort>(&arg);
+
+    // Relocation entry for labels, external symbols or PC relative addressing
+    RelEntry relEntry(pcRel_ ? RT_PC : RT_SYM_16, section_->data.size(), 0);
+    bool rel = pcRel_;
+
+    if (literal)
+        value = *literal;
+    else {
+        const std::string &symbolName = std::get<std::string>(arg);
+        const Symbol &symbol = getSymbol(symbolName);
+        if (!symbol.defined() && !symbol.external) {
+            error("undeclared symbol " + symbolName);
+            return AE_SYMBOL;
+        }
+
+        value = symbol.entry.value;
+
+        if (symbol.label()) {
+            relEntry.symbolId = getSectionSymbol(symbol.section).id;
+            rel = true;
+        } else if (symbol.external) {
+            relEntry.symbolId = symbol.id;
+            rel = true;
+        }
     }
+
+    if (rel) {
+        if (pcRel_)
+            value = value - (ushort)section_->data.size() - (ushort)2u;
+        auto const relBegin = (const ubyte*)&relEntry;
+        auto const relEnd = relBegin + sizeof(RelEntry);
+        relSection_->data.insert(relSection_->data.end(), relBegin, relEnd);
+    }
+
+    section_->data.push_back(value);
+    section_->data.push_back(value >> 8);
 
     return AE_OK;
 }
@@ -575,131 +617,61 @@ Symbol& Assembler::getSymbol(const std::string &symbolName)
     return symbol;
 }
 
-int Assembler::processWord(string_ushort_variant &arg)
+const Symbol& Assembler::getSectionSymbol(const std::string &sectionName)
 {
-    ubyte dataHigh, dataLow;
-    ushort *literal = std::get_if<ushort>(&arg);
-
-    if (literal) {
-        dataHigh = *literal >> 8;
-        dataLow = *literal;
-    } else {
-        const std::string &symbolName = std::get<std::string>(arg);
-        const Symbol &symbol = getSymbol(symbolName);
-        if (!symbol.isDeclared()) {
-            error("undeclared symbol " + symbolName);
-            return AE_SYMBOL;
-        }
-
-        dataHigh = symbol.entry.value >> 8;
-        dataLow = symbol.entry.value;
-
-        // Relocation entries for labels and external symbols
-        const Symbol *sym = nullptr;
-        if (symbol.isLabel())
-            sym = &getSymbol(symbol.section);
-        else if (symbol.external)
-            sym = &symbol;
-        
-        if (sym) {
-            RelEntry relEntry(section_->data.size(), sym->id);
-            auto const relBegin = (const ubyte*)&relEntry;
-            auto const relEnd = relBegin + sizeof(RelEntry);
-            relSection_->data.insert(relSection_->data.end(), relBegin, relEnd);
-        }
+    Symbol &sectionSymbol = getSymbol(sectionName);
+    if (!sectionSymbol.section.empty()) {
+        // Add section symbol to the symbol table so it has an id
+        // for relocation entries
+        const Section &section = sections_[sectionName];
+        sectionSymbol.section = sectionName;
+        sectionSymbol.entry.bind = SYMB_LOCAL;
+        sectionSymbol.entry.type = SYMT_SECTION;
+        sectionSymbol.entry.nameOffset = section.entry.nameOffset;
+        sectionSymbol.entry.sectionEntryId = section.id;
+        insertSymbolTableEntry(sectionSymbol);
     }
-
-    section_->data.push_back(dataLow);
-    section_->data.push_back(dataHigh);
-
-    return AE_OK;
+    return sectionSymbol;
 }
 
-void Assembler::endSection()
+void Assembler::writeObjHeader()
 {
-    if (sectionName_.empty())
-        return;
+    outFile_.seekp(0);
 
-    if (pass_ == 0) {
-        // Set section size in header entry
-        section_->entry.size = lc_;
-        // Reserve space for section
-        section_->data.reserve(lc_);
-        // Reset location counter
-        lc_ = 0;
-    } else
-        // Set section size in header entry
-        relSection_->entry.size = relSection_->data.size();
+    outFile_.write(
+        (const char*)&objHeader_,
+        sizeof(ObjHeader)
+    );
 }
 
-void Assembler::initRelSection()
+void Assembler::initSymbolTable()
 {
-    sections_[relSectionName_] = Section(ST_REL);
-}
-
-void Assembler::initStrSection()
-{
-    // Insert names section so access to it doesn't cause reallocation
+    // Insert symbol table section so access to it doesn't cause reallocation
     // of section map and invalidate section pointers
-    sections_[STR_SECTION] = Section(ST_STR);
+    sections_[SYM_TAB_SECTION] = Section(ST_SYM_TAB);
+    Symbol invalidSymbol;
+    insertSymbolTableEntry(invalidSymbol);
+}
+   
+void Assembler::insertSymbolTableEntry(Symbol &symbol)
+{
+    Section &symTabSection = sections_[SYM_TAB_SECTION];
+
+    symbol.id = symTabSection.data.size() / sizeof(SymbolEntry);
+
+    auto const entryBegin = (const ubyte*)&symbol.entry;
+    auto const entryEnd = entryBegin + sizeof(SymbolEntry);
+    symTabSection.data.insert(symTabSection.data.end(), entryBegin, entryEnd);
 }
 
-std::size_t Assembler::insertIntoStrSection(const std::string &str)
+void Assembler::endSymbolTable()
 {
-    Section &strSection = sections_[STR_SECTION];
-    std::size_t pos = strSection.data.size();
-
-    strSection.data.insert(strSection.data.end(), str.cbegin(), str.cend());
-    strSection.data.emplace_back('\0');
-
-    return pos;
-}
-
-void Assembler::finishStrSection()
-{
-    Section &strSection = sections_[STR_SECTION];
-    sectionHeaderTable_[strSection.id].size = strSection.entry.size = strSection.data.size();
-}
-
-void Assembler::initSectionHeaderTable()
-{
-    // Invalid section
-    sectionHeaderTable_.emplace_back(ST_NONE);
-}
-
-void Assembler::fillSectionHeaderTable()
-{
-    sectionHeaderTable_.reserve(sections_.size());
-
-    for (auto& [sectionName, section] : sections_) {
-        if (section.entry.type != ST_STR && section.entry.size == 0)
-            continue;
-        section.id = sectionHeaderTable_.size();
-        section.entry.nameOffset = insertIntoStrSection(sectionName);
-        sectionHeaderTable_.push_back(section.entry);
-    }
-}
-
-void Assembler::fillSectionHeaderTableRel()
-{
-    for (auto& [sectionName, section] : sections_) {
-        if (section.entry.type != ST_REL || section.entry.size == 0)
-            continue;
-        section.id = sectionHeaderTable_.size();
-        section.entry.nameOffset = insertIntoStrSection(sectionName);
-        sectionHeaderTable_.push_back(section.entry);
-    }
-}
-
-void Assembler::fillSymbolTable()
-{
-    symbolTable_.reserve(symbols_.size());
+    Section &symTabSection = sections_[SYM_TAB_SECTION];
+    symTabSection.data.reserve(symbols_.size());
 
     for (auto& [symbolName, symbol] : symbols_) {
-        symbol.id = symbolTable_.size();
-
-        if (!symbol.section.empty())
-            symbol.entry.sectionEntryId = sections_[symbol.section].id;
+        if (symbol.entry.type == SYMT_SECTION) 
+            continue;
 
         switch (symbol.entry.type) {
         case SYMT_UNDEF: // extern symbol
@@ -711,24 +683,110 @@ void Assembler::fillSymbolTable()
             break;
         case SYMT_ABS:
         case SYMT_LABEL:
-            symbol.external = false;
             if (symbol.global)
                 symbol.entry.bind = SYMB_GLOBAL;
             else
                 continue; // local absolute symbols and local labels are not needed in the table
             break;
-        case SYMT_SECTION:
-            symbol.entry.bind = SYMB_LOCAL;
-            break;
+        case SYMT_SECTION: // already inserted on first rel entry or ignored
+            continue;
         }
 
-        if (symbol.entry.type != SYMT_SECTION)
-            symbol.entry.nameOffset = insertIntoStrSection(symbolName);
-        else
-            symbol.entry.nameOffset = sectionHeaderTable_[symbol.entry.sectionEntryId].nameOffset;
-
-        symbolTable_.push_back(symbol.entry);
+        symbol.entry.nameOffset = insertStrSectionEntry(symbolName);
+        insertSymbolTableEntry(symbol);
     }
+
+    insertSectionTableEntry(SYM_TAB_SECTION, symTabSection);
+    writeSection(symTabSection);
+}
+
+void Assembler::initRelSection()
+{
+    // Insert relocation section so access to it doesn't cause reallocation
+    // of section map and invalidate section pointers
+    sections_[relSectionName_] = Section(ST_REL);
+}
+
+void Assembler::initStrSection()
+{
+    // Insert names section so access to it doesn't cause reallocation
+    // of section map and invalidate section pointers
+    sections_[STR_SECTION] = Section(ST_STR);
+}
+
+std::size_t Assembler::insertStrSectionEntry(const std::string &str)
+{
+    Section &strSection = sections_[STR_SECTION];
+    std::size_t pos = strSection.data.size();
+
+    strSection.data.insert(strSection.data.end(), str.cbegin(), str.cend());
+    strSection.data.emplace_back('\0');
+
+    return pos;
+}
+
+void Assembler::endStrSection()
+{
+    Section &strSection = sections_[STR_SECTION];
+    insertSectionTableEntry(STR_SECTION, strSection);
+    writeSection(strSection);
+    objHeader_.strEntryId = strSection.id;
+}
+
+void Assembler::initSectionHeaderTable()
+{
+    // Invalid section
+    sectionHeaderTable_.emplace_back(ST_NONE);
+}
+
+void Assembler::endSectionHeaderTable()
+{
+    objHeader_.shtOffset = outFile_.tellp();
+    objHeader_.shtSize = sectionHeaderTable_.size();
+
+    outFile_.write(
+        (const char*)sectionHeaderTable_.data(),
+        sectionHeaderTable_.size() * sizeof(SectionEntry)
+    );
+}
+
+void Assembler::endSection()
+{
+    if (sectionName_.empty())
+        return;
+
+    if (lc_ == 0 && section_->entry.size == 0)
+        return;
+
+    if (pass_ == 0) {
+        insertSectionTableEntry(sectionName_, *section_, lc_);
+        section_->data.reserve(lc_);
+        lc_ = 0;
+    } else {
+        writeSection(*section_);
+        if (!relSection_->data.empty()) {
+            insertSectionTableEntry(relSectionName_, *relSection_);
+            writeSection(*relSection_);
+        }
+    }
+}
+
+void Assembler::insertSectionTableEntry(const std::string &sectionName, Section &section, ushort size)
+{
+    section.id = sectionHeaderTable_.size();
+    section.entry.size = size ? size : section.data.size();
+    section.entry.nameOffset = insertStrSectionEntry(sectionName);
+    sectionHeaderTable_.push_back(section.entry);
+}
+
+void Assembler::writeSection(Section &section)
+{
+    sectionHeaderTable_[section.id].dataOffset = section.entry.dataOffset = outFile_.tellp();
+    outFile_.write(
+        (const char *)section.data.data(),
+        section.entry.size
+    );
+
 }
 
 void Assembler::syntaxError(const std::string& msg)

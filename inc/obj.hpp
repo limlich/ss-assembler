@@ -4,14 +4,16 @@
 #include "types.hpp"
 #include "section.hpp"
 
+const uint OBJ_MAGIC_BYTES = 0x4A424F7F; // { 0x7F, 'O', 'B', 'J' }
+
 struct ObjHeader
 {
-    const ubyte magic[6] = { 0x4, 0xF, 'O', 'B', 'J', '\0' };
-    ubyte objHeaderSize = sizeof(ObjHeader);
-    ubyte shtEntrySize = sizeof(SectionEntry);
-    uint shtOffset; // section header table offset in obj file
-    ushort shtSize; // section header table size (in entries)
-    ushort strEntryId; // entry of names section in section header table
+    uint magic = OBJ_MAGIC_BYTES;
+    //const ubyte OBJ_HEADER_SIZE = sizeof(ObjHeader);
+    //const ubyte SHT_ENTRY_SIZE = sizeof(SectionEntry);
+    uint shtOffset = 0; // section header table offset in obj file
+    ushort shtSize = 0; // section header table size (in entries)
+    ushort strEntryId = 0; // entry of names section in section header table
 };
 
 #endif

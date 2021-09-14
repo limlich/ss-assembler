@@ -9,12 +9,19 @@
 
 class Symbol;
 
+enum RelType: ubyte
+{
+    RT_SYM_16,
+    RT_PC
+};
+
 struct RelEntry
 {
-    RelEntry(ushort offset, uint symbolId) :
-        offset(offset), symbolId(symbolId)
+    RelEntry(RelType type, ushort offset, uint symbolId) :
+        type(type), offset(offset), symbolId(symbolId)
     {}
 
+    RelType type;
     ushort offset;
     ushort symbolId;
 };
@@ -36,7 +43,7 @@ enum SymbolType: ubyte
 struct SymbolEntry
 {
     SymbolEntry() :
-        bind(SYMB_LOCAL), type(SYMT_UNDEF), value(0)
+        bind(SYMB_LOCAL), type(SYMT_UNDEF), value(0), nameOffset(0), sectionEntryId(0)
     {}
     SymbolEntry(SymbolBind bind, SymbolType type, ushort value, uint nameOffset, uint sectionEntryId) :
         bind(bind), type(type), value(value), nameOffset(nameOffset), sectionEntryId(sectionEntryId)
@@ -55,11 +62,9 @@ struct Symbol
         global(false), external(false), section(""), id(0)
     {}
 
-    bool isDeclared() const { return !(entry.bind == SYMB_LOCAL && entry.type == SYMT_UNDEF); }
-    bool isDefined() const { return entry.type != SYMT_UNDEF; }
-    bool isAbs() const { return entry.type == SYMT_ABS; }
-    bool isLabel() const { return entry.type == SYMT_LABEL; }
-    bool isSection() const { return entry.type == SYMT_SECTION; }
+    bool defined() const { return entry.type != SYMT_UNDEF; }
+    bool label() const { return entry.type == SYMT_LABEL; }
+    bool abs() const { return entry.type == SYMT_ABS; }
 
     bool global;
     bool external;

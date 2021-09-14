@@ -14,11 +14,13 @@ enum SectionType: ubyte
     ST_DATA,   // code and data
     ST_REL,    // section containing relocation entries
     ST_STR, // section containing symbol identifiers
+    ST_SYM_TAB // section containing symbol table entries
 };
 
-const std::string STR_SECTION = ".names.str"; // names section name
-const std::string REL_SUFFIX = ".rel"; // relocation section suffix
 const std::string SECTION_PREFIX = "."; // section symbol prefix
+const std::string REL_SUFFIX = ".rel"; // relocation section suffix
+const std::string STR_SECTION = SECTION_PREFIX + "names.str"; // names section name
+const std::string SYM_TAB_SECTION = SECTION_PREFIX + "sym.tab"; // symbol table section name
 
 struct SectionEntry
 {
