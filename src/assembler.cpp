@@ -609,8 +609,8 @@ int Assembler::processWord(string_ushort_variant &arg)
         }
     }
 
-    section_->data.push_back(dataHigh);
     section_->data.push_back(dataLow);
+    section_->data.push_back(dataHigh);
 
     return AE_OK;
 }
