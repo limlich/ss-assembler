@@ -591,8 +591,6 @@ int Assembler::processWord(string_ushort_variant &arg)
     }
 
     if (rel) {
-        if (pcRel_)
-            value = value - (ushort)section_->data.size() - (ushort)2u;
         auto const relBegin = (const ubyte*)&relEntry;
         auto const relEnd = relBegin + sizeof(RelEntry);
         relSection_->data.insert(relSection_->data.end(), relBegin, relEnd);
