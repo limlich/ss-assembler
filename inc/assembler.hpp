@@ -109,6 +109,8 @@ private:
     // Relocation section
     std::string relSectionName_;
     Section *relSection_;
+    std::vector<ubyte> sectionDataCache_;
+    std::vector<ubyte> relSectionDataCache_;
 
     // Instruction data
     ubyte instrNumArgs_;

@@ -497,14 +497,20 @@ int Assembler::dirSecondPass(const std::string& dirName)
     case EQU:
         break;
         
-    case SECTION:
+    case SECTION: {
         endSection();
 
         sectionName_ = SECTION_PREFIX + std::get<std::string>(dirArgs_[0]);
         relSectionName_ = sectionName_ + REL_SUFFIX;
+
         section_ = &sections_[sectionName_];
         relSection_ = &sections_[relSectionName_];
+
+        section_->data = std::move(sectionDataCache_);
+        relSection_->data = std::move(relSectionDataCache_);
+
         break;
+    }
 
     case WORD:
         for (uint i = 0; i < dirArgs_.size(); ++i) {
@@ -767,6 +773,11 @@ void Assembler::endSection()
             writeSection(*relSection_);
         }
     }
+
+    sectionDataCache_ = std::move(section_->data);
+    relSectionDataCache_ = std::move(relSection_->data);
+    sectionDataCache_.clear();
+    relSectionDataCache_.clear();
 }
 
 void Assembler::insertSectionTableEntry(const std::string &sectionName, Section &section, ushort size)
