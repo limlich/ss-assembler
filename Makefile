@@ -43,6 +43,6 @@ $(LEXER_SRC): $(LEXER_L)
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) $(LEXER_SRC) $(PARSER_H) $(PARSER_LOC_H) $(PARSER_SRC)
 
 -include $(DEPS)
