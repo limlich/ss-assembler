@@ -1,4 +1,4 @@
-%require "3.2"
+%require "3.5.1"
 %language "c++"
 %defines
 
@@ -33,10 +33,10 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
 
 %define api.namespace {yy}
 %define api.parser.class {Parser}
-%define api.symbol.prefix {TOKEN_}
 %define api.value.type variant
 %define api.token.constructor
-%define parse.error detailed
+%define filename_type {const std::string}
+%define parse.error verbose
 %define parse.lac full
 
 %token <std::string> IDENT
@@ -45,6 +45,8 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
 %token DOLLAR PERCENT COLON COMMA PERIOD PLUS MUL
 %token SBR_OPEN SBR_CLOSE
 %token NEWLINE
+%token YYEOF 0 "end of file"
+%token YYUNDEF
 
 %type <std::string> label
 %type <ushort> literal
