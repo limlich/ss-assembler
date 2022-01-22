@@ -23,7 +23,7 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
 
     lexer_.switch_streams(&inFile);
 
-    int res = AE_OK;
+    bool error = false;
 
     writeObjHeader();
     initSectionHeaderTable();
@@ -44,28 +44,35 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         relSection_ = nullptr;
         lc_ = 0;
         
-        res = parser_.parse();
+        int res;
 
-        if (res != AE_END) {
+        while ((res = parser_.parse()) != AE_END) {
             if (res != AE_OK)
+                error = true;
+            else {
+                dir("end"); // implicit .end on eof
                 break;
-            dir("end"); // implicit .end
-        } else
-            res = AE_OK;
+            }
+        }
+
+        if (error)
+            break;
     }
 
     location_.initialize();
     lexer_.switch_streams();
     inFile.close();
     outFile_.close();
-    if (res != AE_OK)
+    if (error) {
         std::remove(outFilename.c_str());
+        std::cout << "Deleting output file: " << outFilename << std::endl;
+    }
 
     sections_.clear();
     sectionHeaderTable_.clear();
     symbols_.clear();
 
-    return res;
+    return error;
 }
 
 void Assembler::locationAddColumns(yy::location::counter_type count)
