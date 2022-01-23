@@ -10,6 +10,16 @@
 #include "assembler.hpp"
 
 #define YY_USER_ACTION assembler.locationAddColumns(yyleng);
+
+void yy::Lexer::skip_line(Assembler& assembler)
+{
+    yy::Parser::symbol_kind_type symKind;
+    do {
+        symKind = get_token(assembler).kind();
+    } while (symKind != yy::Parser::symbol_kind_type::S_NEWLINE &&
+             symKind != yy::Parser::symbol_kind_type::S_YYEOF);
+}
+
 %}
 
 ident       [a-zA-Z_][a-zA-Z0-9_]*

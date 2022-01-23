@@ -430,8 +430,18 @@ static const flex_int16_t yy_chk[68] =
 #include "assembler.hpp"
 
 #define YY_USER_ACTION assembler.locationAddColumns(yyleng);
-#line 433 "src/lexer.cpp"
-#line 434 "src/lexer.cpp"
+
+void yy::Lexer::skip_line(Assembler& assembler)
+{
+    yy::Parser::symbol_kind_type symKind;
+    do {
+        symKind = get_token(assembler).kind();
+    } while (symKind != yy::Parser::symbol_kind_type::S_NEWLINE &&
+             symKind != yy::Parser::symbol_kind_type::S_YYEOF);
+}
+
+#line 443 "src/lexer.cpp"
+#line 444 "src/lexer.cpp"
 
 #define INITIAL 0
 
@@ -563,9 +573,9 @@ YY_DECL
 		}
 
 	{
-#line 30 "lexer.l"
+#line 40 "lexer.l"
 
-#line 568 "src/lexer.cpp"
+#line 578 "src/lexer.cpp"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -624,100 +634,100 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 31 "lexer.l"
+#line 41 "lexer.l"
 { return yy::Parser::make_REG(yytext, assembler.getLocation()); }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 32 "lexer.l"
+#line 42 "lexer.l"
 { return yy::Parser::make_IDENT(yytext, assembler.getLocation()); }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 33 "lexer.l"
+#line 43 "lexer.l"
 { return yy::Parser::make_INT_10(yytext, assembler.getLocation()); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 34 "lexer.l"
+#line 44 "lexer.l"
 { return yy::Parser::make_INT_16(yytext, assembler.getLocation()); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 35 "lexer.l"
+#line 45 "lexer.l"
 { return yy::Parser::make_DOLLAR(assembler.getLocation()); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 36 "lexer.l"
+#line 46 "lexer.l"
 { return yy::Parser::make_PERCENT(assembler.getLocation()); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 37 "lexer.l"
+#line 47 "lexer.l"
 { return yy::Parser::make_COLON(assembler.getLocation()); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 38 "lexer.l"
+#line 48 "lexer.l"
 { return yy::Parser::make_COMMA(assembler.getLocation()); }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 39 "lexer.l"
+#line 49 "lexer.l"
 { return yy::Parser::make_PERIOD(assembler.getLocation()); }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 40 "lexer.l"
+#line 50 "lexer.l"
 { return yy::Parser::make_PLUS(assembler.getLocation()); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 41 "lexer.l"
+#line 51 "lexer.l"
 { return yy::Parser::make_MUL(assembler.getLocation()); }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 42 "lexer.l"
+#line 52 "lexer.l"
 { return yy::Parser::make_SBR_OPEN(assembler.getLocation()); }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 43 "lexer.l"
+#line 53 "lexer.l"
 { return yy::Parser::make_SBR_CLOSE(assembler.getLocation()); }
 	YY_BREAK
 case 14:
 /* rule 14 can match eol */
 YY_RULE_SETUP
-#line 44 "lexer.l"
+#line 54 "lexer.l"
 { assembler.locationAddLines(); return yy::Parser::make_NEWLINE(assembler.getLocation()); }
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
-#line 45 "lexer.l"
+#line 55 "lexer.l"
 { return yy::Parser::make_YYEOF(assembler.getLocation()); }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 46 "lexer.l"
+#line 56 "lexer.l"
 {}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 47 "lexer.l"
+#line 57 "lexer.l"
 {}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 48 "lexer.l"
+#line 58 "lexer.l"
 { return yy::Parser::make_YYUNDEF(assembler.getLocation()); }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 49 "lexer.l"
+#line 59 "lexer.l"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 720 "src/lexer.cpp"
+#line 730 "src/lexer.cpp"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1678,6 +1688,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 49 "lexer.l"
+#line 59 "lexer.l"
 
 

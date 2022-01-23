@@ -19,10 +19,9 @@ enum AssemblerExitCode: int
 {
     AE_OK = 0,
     AE_SYNTAX = 1, // syntax error
+    AE_SYNTAX_NOSKIP, // syntax error (no need to skip line)
     AE_END, // .end directive
     AE_FILE, // file errors (cannot open file, no file provided...)
-    AE_SYMBOL, // symbol errors (multiple definition, not defined...)
-    AE_SECTION, // section errors (no section, multiple definition)
 };
 
 class Assembler
@@ -97,7 +96,7 @@ private:
 
     ubyte pass_;
     uint lc_;
-    bool endDir_;
+    bool error_;
 
     ObjHeader objHeader_;
 

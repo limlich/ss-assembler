@@ -23,12 +23,12 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
 
     lexer_.switch_streams(&inFile);
 
-    bool error = false;
-
     writeObjHeader();
     initSectionHeaderTable();
     initSymbolTable();
     initStrSection();
+
+    error_ = false;
 
     for (pass_ = 0; pass_ < 2; ++pass_) {
         inFile.seekg(0);
@@ -37,7 +37,6 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         instrNumArgs_ = 0;
         dirArgs_.clear();
         labeled_ = false;
-        endDir_ = false;
         sectionName_ = "";
         relSectionName_ = "";
         section_ = nullptr;
@@ -47,15 +46,21 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         int res;
 
         while ((res = parser_.parse()) != AE_END) {
-            if (res != AE_OK)
-                error = true;
-            else {
+            if (res == AE_OK) {
                 dir("end"); // implicit .end on eof
                 break;
+            } else {
+                error_ = true;
+                if (res == AE_SYNTAX) {
+                    instrNumArgs_ = 0;
+                    dirArgs_.clear();
+                    labeled_ = false;
+                    lexer_.skip_line(*this); // skip erroneous line
+                }
             }
         }
 
-        if (error)
+        if (error_)
             break;
     }
 
@@ -63,7 +68,7 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
     lexer_.switch_streams();
     inFile.close();
     outFile_.close();
-    if (error) {
+    if (error_) {
         std::remove(outFilename.c_str());
         std::cout << "Deleting output file: " << outFilename << std::endl;
     }
@@ -72,7 +77,7 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
     sectionHeaderTable_.clear();
     symbols_.clear();
 
-    return error;
+    return error_ ? AE_SYNTAX : AE_OK;
 }
 
 void Assembler::locationAddColumns(yy::location::counter_type count)
@@ -89,7 +94,7 @@ int Assembler::instr(std::string instrName)
 {
     if (sectionName_.empty()) {
         error("instruction not in any section");
-        return AE_SECTION;
+        return AE_SYNTAX_NOSKIP;
     }
 
     regIndUpdate_ = REGIND_NONE;
@@ -132,7 +137,7 @@ int Assembler::instrFirstPass(const std::string& instrName)
     auto instrIt = INSTRUCTIONS.find(instrName);
     if (instrIt == INSTRUCTIONS.end()) {
         syntaxError("unknown instruction: " + instrName);
-        return AE_SYNTAX;
+        return AE_SYNTAX_NOSKIP;
     }
 
     const InstrInfo& iInfo = instrIt->second;
@@ -140,7 +145,7 @@ int Assembler::instrFirstPass(const std::string& instrName)
     if (iInfo.numArgs != instrNumArgs_) {
         syntaxError("instruction takes " + std::to_string(iInfo.numArgs)
                     + " operands, but " + std::to_string(instrNumArgs_)+ " were provided");
-        return AE_SYNTAX;
+        return AE_SYNTAX_NOSKIP;
     }
 
     lc_++; // InstrDescr
@@ -169,13 +174,13 @@ int Assembler::instrFirstPass(const std::string& instrName)
         if (iInfo.jmpSyntax != arg.jmpSyntax) {
             syntaxError(std::string("expected ") + (iInfo.jmpSyntax ? "jump" : "data")
                         + " operand syntax");
-            return AE_SYNTAX;
+            return AE_SYNTAX_NOSKIP;
         }
 
         if (!(iInfo.argAddrModes[i] & arg.addrMode)) {
             syntaxError(std::string("invalid addressing mode for ")
                         + (i == 0 ? "first" : "second") + " operand");
-            return AE_SYNTAX;
+            return AE_SYNTAX_NOSKIP;
         }
 
         switch(arg.addrMode) {
@@ -302,44 +307,53 @@ int Assembler::instrArgPCRel(const std::string& sym)
 int Assembler::instrArgRegDir(const std::string& reg, bool jmpSyntax)
 {
     auto regIt = REGISTERS.find(reg);
-    if (regIt == REGISTERS.end()) {
-        syntaxError("invalid register: " + reg);
-        return AE_SYNTAX;
-    }
+    ubyte regNum = (regIt == REGISTERS.end()) ? (ubyte)NUM_REGISTERS : regIt->second;
 
     instrArgs_[instrNumArgs_].jmpSyntax = jmpSyntax;
     instrArgs_[instrNumArgs_].addrMode = REGDIR;
-    instrArgs_[instrNumArgs_].val = regIt->second;
+    instrArgs_[instrNumArgs_].val = regNum;
     instrNumArgs_++;
+
+    if (regIt == REGISTERS.end()) {
+        syntaxError("invalid register: " + reg);
+        return AE_SYNTAX_NOSKIP;
+    }
+
     return AE_OK;
 }
 int Assembler::instrArgRegInd(const std::string& reg, bool jmpSyntax)
 {
     auto regIt = REGISTERS.find(reg);
-    if (regIt == REGISTERS.end()) {
-        syntaxError("invalid register: " + reg);
-        return AE_SYNTAX;
-    }
+    ubyte regNum = (regIt == REGISTERS.end()) ? (ubyte)NUM_REGISTERS : regIt->second;
 
     instrArgs_[instrNumArgs_].jmpSyntax = jmpSyntax;
     instrArgs_[instrNumArgs_].addrMode = REGIND;
-    instrArgs_[instrNumArgs_].val = regIt->second;
+    instrArgs_[instrNumArgs_].val = regNum;
     instrNumArgs_++;
+
+    if (regIt == REGISTERS.end()) {
+        syntaxError("invalid register: " + reg);
+        return AE_SYNTAX_NOSKIP;
+    }
+
     return AE_OK;
 }
 int Assembler::instrArgRegIndOff(const std::string& reg, string_ushort_variant off, bool jmpSyntax)
 {
     auto regIt = REGISTERS.find(reg);
-    if (regIt == REGISTERS.end()) {
-        syntaxError("invalid register: " + reg);
-        return AE_SYNTAX;
-    }
+    ubyte regNum = (regIt == REGISTERS.end()) ? (ubyte)NUM_REGISTERS : regIt->second;
 
     instrArgs_[instrNumArgs_].jmpSyntax = jmpSyntax;
     instrArgs_[instrNumArgs_].addrMode = REGIND_OFFSET;
-    instrArgs_[instrNumArgs_].val = regIt->second;
+    instrArgs_[instrNumArgs_].val = regNum;
     instrArgs_[instrNumArgs_].off = off;
     instrNumArgs_++;
+
+    if (regIt == REGISTERS.end()) {
+        syntaxError("invalid register: " + reg);
+        return AE_SYNTAX_NOSKIP;
+    }
+
     return AE_OK;
 }
 
@@ -361,19 +375,19 @@ int Assembler::dirFirstPass(const std::string& dirName)
     auto dirIt = DIRECTIVES.find(dirName);
     if (dirIt == DIRECTIVES.end()) {
         syntaxError("unknown directive: " + dirName);
-        return AE_SYNTAX;
+        return AE_SYNTAX_NOSKIP;
     }
 
     const DirInfo& dInfo = dirIt->second;
 
     if (dInfo.sectionRequired && sectionName_.empty()) {
         syntaxError("directive not in any section: " + dirName);
-        return AE_SYNTAX;
+        return AE_SYNTAX_NOSKIP;
     }
 
     if (!dInfo.labelsAllowed && labeled_) {
         syntaxError("directive doesn't support labels: " + dirName);
-        return AE_SYNTAX;
+        return AE_SYNTAX_NOSKIP;
     }
 
     // Check argument syntax
@@ -381,43 +395,43 @@ int Assembler::dirFirstPass(const std::string& dirName)
     case NONE:
         if (!dirArgs_.empty()) {
             syntaxError("expected directive syntax: ." + dirName);
-            return AE_SYNTAX;
+            return AE_SYNTAX_NOSKIP;
         }
         break;
     case SYM:
         if (dirArgs_.size() != 1 || !std::get_if<std::string>(&dirArgs_[0])) {
             syntaxError("expected directive syntax: ." + dirName + " <IDENT>");
-            return AE_SYNTAX;
+            return AE_SYNTAX_NOSKIP;
         }
         break;
     case LIT:
         if (dirArgs_.size() != 1 || !std::get_if<ushort>(&dirArgs_[0])) {
             syntaxError("expected directive syntax: ." + dirName + " <LITERAL>");
-            return AE_SYNTAX;
+            return AE_SYNTAX_NOSKIP;
         }
         break;
     case SYM_LIT:
         if (dirArgs_.size() != 2 || !std::get_if<std::string>(&dirArgs_[0]) || !std::get_if<ushort>(&dirArgs_[1])) {
             syntaxError("expected directive syntax: ." + dirName + " <IDENT>, <LITERAL>");
-            return AE_SYNTAX;
+            return AE_SYNTAX_NOSKIP;
         }
         break;
     case SYM_LIST:
         if (dirArgs_.empty()) {
             syntaxError("expected directive syntax: ." + dirName + " <IDENT list>");
-            return AE_SYNTAX;
+            return AE_SYNTAX_NOSKIP;
         }
         for (uint i = 0; i < dirArgs_.size(); ++i) {
             if (!std::get_if<std::string>(&dirArgs_[i])) {
                 syntaxError("unexpected " + std::to_string(std::get<ushort>(dirArgs_[i])) + ", expected directive syntax: ." + dirName + " <IDENT list>");
-                return AE_SYNTAX;
+                return AE_SYNTAX_NOSKIP;
             }
         }
         break;
     case SYM_LIT_LIST:
         if (dirArgs_.empty()) {
             syntaxError("expected directive syntax: ." + dirName + " <IDENT/LITERAL list>");
-            return AE_SYNTAX;
+            return AE_SYNTAX_NOSKIP;
         }
         break;
     }
@@ -449,7 +463,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
         auto sit = sections_.find(sectionName_);
         if (sit != sections_.end()) {
             error("section with the same name already declared in this file: " + sectionName_);
-            return AE_SECTION;
+            return AE_SYNTAX_NOSKIP;
         }
 
         initRelSection();
@@ -476,7 +490,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
         Symbol &symbol = getSymbol(symbolName);
         if (symbol.defined()) {
             error("symbol already defined: " + symbolName);
-            return AE_SYMBOL;
+            return AE_SYNTAX_NOSKIP;
         } else { // symbol definition
             symbol.external = false;
             symbol.entry.type = SYMT_ABS;
@@ -487,7 +501,6 @@ int Assembler::dirFirstPass(const std::string& dirName)
 
     case END:
         endSection();
-        endDir_ = true;
         return AE_END;
     }
 
@@ -537,7 +550,6 @@ int Assembler::dirSecondPass(const std::string& dirName)
         endStrSection();
         endSectionHeaderTable();
         writeObjHeader();
-        endDir_ = true;
         return AE_END;
     }
 
@@ -554,12 +566,12 @@ int Assembler::label(const std::string& label)
     if (pass_ == 0) {
         if (sectionName_.empty()) {
             error("label not in any section: " + label);
-            return AE_SYMBOL;
+            return AE_SYNTAX_NOSKIP;
         }
         Symbol &symbol = getSymbol(label);
         if (symbol.defined()) {
             error("symbol already defined: " + label);
-            return AE_SYMBOL;
+            return AE_SYNTAX_NOSKIP;
         } else { // symbol definition
             symbol.external = false;
             symbol.section = sectionName_;
@@ -589,7 +601,7 @@ int Assembler::processWord(string_ushort_variant &arg)
         const Symbol &symbol = getSymbol(symbolName);
         if (!symbol.defined() && !symbol.external) {
             error("undeclared symbol " + symbolName);
-            return AE_SYMBOL;
+            return AE_SYNTAX_NOSKIP;
         }
 
         value = symbol.entry.value;
@@ -807,10 +819,12 @@ void Assembler::writeSection(Section &section)
 
 void Assembler::syntaxError(const std::string& msg)
 {
+    error_ = true;
     parser_.error(getLocation(), "syntax error, " + msg);
 }
 void Assembler::error(const std::string& msg)
 {
+    error_ = true;
     parser_.error(getLocation(), "error, " + msg);
 }
 void Assembler::warning(const std::string& msg)

@@ -1,4 +1,4 @@
-// A Bison parser, made by GNU Bison 3.7.6.
+// A Bison parser, made by GNU Bison 3.8.2.
 
 // Skeleton implementation for Bison LALR(1) parsers in C++
 
@@ -46,7 +46,7 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
     return lexer.get_token(assembler);
 }
 
-#define RET_ON_ERROR(X) { int r = X; if (r != AE_OK) return r; }
+#define PARSER_CALLBACK(X) { int r = X; if (r != AE_OK && r != AE_SYNTAX_NOSKIP) return r; }
 
 #line 52 "src/parser.cpp"
 
@@ -169,9 +169,9 @@ namespace yy {
   Parser::syntax_error::~syntax_error () YY_NOEXCEPT YY_NOTHROW
   {}
 
-  /*---------------.
-  | symbol kinds.  |
-  `---------------*/
+  /*---------.
+  | symbol.  |
+  `---------*/
 
 
 
@@ -205,7 +205,7 @@ namespace yy {
   Parser::by_state::kind () const YY_NOEXCEPT
   {
     if (state == empty_state)
-      return symbol_kind::TOKEN_YYEMPTY;
+      return symbol_kind::S_YYEMPTY;
     else
       return YY_CAST (symbol_kind_type, yystos_[+state]);
   }
@@ -218,15 +218,15 @@ namespace yy {
   {
     switch (that.kind ())
     {
-      case symbol_kind::TOKEN_IDENT: // IDENT
-      case symbol_kind::TOKEN_INT_10: // INT_10
-      case symbol_kind::TOKEN_INT_16: // INT_16
-      case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_label: // label
+      case symbol_kind::S_IDENT: // "identifier"
+      case symbol_kind::S_INT_10: // "integer10"
+      case symbol_kind::S_INT_16: // "integer16"
+      case symbol_kind::S_REG: // "register"
+      case symbol_kind::S_label: // label
         value.YY_MOVE_OR_COPY< std::string > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::TOKEN_literal: // literal
+      case symbol_kind::S_literal: // literal
         value.YY_MOVE_OR_COPY< ushort > (YY_MOVE (that.value));
         break;
 
@@ -245,15 +245,15 @@ namespace yy {
   {
     switch (that.kind ())
     {
-      case symbol_kind::TOKEN_IDENT: // IDENT
-      case symbol_kind::TOKEN_INT_10: // INT_10
-      case symbol_kind::TOKEN_INT_16: // INT_16
-      case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_label: // label
+      case symbol_kind::S_IDENT: // "identifier"
+      case symbol_kind::S_INT_10: // "integer10"
+      case symbol_kind::S_INT_16: // "integer16"
+      case symbol_kind::S_REG: // "register"
+      case symbol_kind::S_label: // label
         value.move< std::string > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::TOKEN_literal: // literal
+      case symbol_kind::S_literal: // literal
         value.move< ushort > (YY_MOVE (that.value));
         break;
 
@@ -262,7 +262,7 @@ namespace yy {
     }
 
     // that is emptied.
-    that.kind_ = symbol_kind::TOKEN_YYEMPTY;
+    that.kind_ = symbol_kind::S_YYEMPTY;
   }
 
 #if YY_CPLUSPLUS < 201103L
@@ -272,15 +272,15 @@ namespace yy {
     state = that.state;
     switch (that.kind ())
     {
-      case symbol_kind::TOKEN_IDENT: // IDENT
-      case symbol_kind::TOKEN_INT_10: // INT_10
-      case symbol_kind::TOKEN_INT_16: // INT_16
-      case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_label: // label
+      case symbol_kind::S_IDENT: // "identifier"
+      case symbol_kind::S_INT_10: // "integer10"
+      case symbol_kind::S_INT_16: // "integer16"
+      case symbol_kind::S_REG: // "register"
+      case symbol_kind::S_label: // label
         value.copy< std::string > (that.value);
         break;
 
-      case symbol_kind::TOKEN_literal: // literal
+      case symbol_kind::S_literal: // literal
         value.copy< ushort > (that.value);
         break;
 
@@ -298,15 +298,15 @@ namespace yy {
     state = that.state;
     switch (that.kind ())
     {
-      case symbol_kind::TOKEN_IDENT: // IDENT
-      case symbol_kind::TOKEN_INT_10: // INT_10
-      case symbol_kind::TOKEN_INT_16: // INT_16
-      case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_label: // label
+      case symbol_kind::S_IDENT: // "identifier"
+      case symbol_kind::S_INT_10: // "integer10"
+      case symbol_kind::S_INT_16: // "integer16"
+      case symbol_kind::S_REG: // "register"
+      case symbol_kind::S_label: // label
         value.move< std::string > (that.value);
         break;
 
-      case symbol_kind::TOKEN_literal: // literal
+      case symbol_kind::S_literal: // literal
         value.move< ushort > (that.value);
         break;
 
@@ -370,7 +370,7 @@ namespace yy {
   }
 
   void
-  Parser::yypop_ (int n)
+  Parser::yypop_ (int n) YY_NOEXCEPT
   {
     yystack_.pop (n);
   }
@@ -413,13 +413,13 @@ namespace yy {
   }
 
   bool
-  Parser::yy_pact_value_is_default_ (int yyvalue)
+  Parser::yy_pact_value_is_default_ (int yyvalue) YY_NOEXCEPT
   {
     return yyvalue == yypact_ninf_;
   }
 
   bool
-  Parser::yy_table_value_is_error_ (int yyvalue)
+  Parser::yy_table_value_is_error_ (int yyvalue) YY_NOEXCEPT
   {
     return yyvalue == yytable_ninf_;
   }
@@ -450,8 +450,8 @@ namespace yy {
     /// The return value of parse ().
     int yyresult;
 
-    /// Discard the LAC context in case there still is one left from a
-    /// previous invocation.
+    // Discard the LAC context in case there still is one left from a
+    // previous invocation.
     yy_lac_discard_ ("init");
 
 #if YY_EXCEPTIONS
@@ -513,13 +513,13 @@ namespace yy {
       }
     YY_SYMBOL_PRINT ("Next token is", yyla);
 
-    if (yyla.kind () == symbol_kind::TOKEN_YYerror)
+    if (yyla.kind () == symbol_kind::S_YYerror)
     {
       // The scanner already issued an error message, process directly
       // to error recovery.  But do not keep the error token as
       // lookahead, it is too special and may lead us to an endless
       // loop in error recovery. */
-      yyla.kind_ = symbol_kind::TOKEN_YYUNDEF;
+      yyla.kind_ = symbol_kind::S_YYUNDEF;
       goto yyerrlab1;
     }
 
@@ -529,7 +529,7 @@ namespace yy {
     if (yyn < 0 || yylast_ < yyn || yycheck_[yyn] != yyla.kind ())
       {
         if (!yy_lac_establish_ (yyla.kind ()))
-           goto yyerrlab;
+          goto yyerrlab;
         goto yydefault;
       }
 
@@ -540,7 +540,7 @@ namespace yy {
         if (yy_table_value_is_error_ (yyn))
           goto yyerrlab;
         if (!yy_lac_establish_ (yyla.kind ()))
-           goto yyerrlab;
+          goto yyerrlab;
 
         yyn = -yyn;
         goto yyreduce;
@@ -579,15 +579,15 @@ namespace yy {
          when using variants.  */
       switch (yyr1_[yyn])
     {
-      case symbol_kind::TOKEN_IDENT: // IDENT
-      case symbol_kind::TOKEN_INT_10: // INT_10
-      case symbol_kind::TOKEN_INT_16: // INT_16
-      case symbol_kind::TOKEN_REG: // REG
-      case symbol_kind::TOKEN_label: // label
+      case symbol_kind::S_IDENT: // "identifier"
+      case symbol_kind::S_INT_10: // "integer10"
+      case symbol_kind::S_INT_16: // "integer16"
+      case symbol_kind::S_REG: // "register"
+      case symbol_kind::S_label: // label
         yylhs.value.emplace< std::string > ();
         break;
 
-      case symbol_kind::TOKEN_literal: // literal
+      case symbol_kind::S_literal: // literal
         yylhs.value.emplace< ushort > ();
         break;
 
@@ -611,140 +611,140 @@ namespace yy {
         {
           switch (yyn)
             {
-  case 10: // instr: IDENT
-#line 63 "parser.y"
-             { RET_ON_ERROR(assembler.instr(yystack_[0].value.as < std::string > ())) }
+  case 10: // instr: "identifier"
+#line 73 "parser.y"
+             { PARSER_CALLBACK(assembler.instr(yystack_[0].value.as < std::string > ())) }
 #line 618 "src/parser.cpp"
     break;
 
-  case 11: // instr: IDENT instr_arg
-#line 64 "parser.y"
-                       { RET_ON_ERROR(assembler.instr(yystack_[1].value.as < std::string > ())) }
+  case 11: // instr: "identifier" instr_arg
+#line 74 "parser.y"
+                       { PARSER_CALLBACK(assembler.instr(yystack_[1].value.as < std::string > ())) }
 #line 624 "src/parser.cpp"
     break;
 
-  case 12: // instr: IDENT instr_arg COMMA instr_arg
-#line 65 "parser.y"
-                                       { RET_ON_ERROR(assembler.instr(yystack_[3].value.as < std::string > ())) }
+  case 12: // instr: "identifier" instr_arg "," instr_arg
+#line 75 "parser.y"
+                                       { PARSER_CALLBACK(assembler.instr(yystack_[3].value.as < std::string > ())) }
 #line 630 "src/parser.cpp"
     break;
 
-  case 13: // instr_arg: DOLLAR literal
-#line 68 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgImmed(yystack_[0].value.as < ushort > ())) }
+  case 13: // instr_arg: "$" literal
+#line 78 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgImmed(yystack_[0].value.as < ushort > ())) }
 #line 636 "src/parser.cpp"
     break;
 
-  case 14: // instr_arg: DOLLAR IDENT
-#line 70 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgImmed(yystack_[0].value.as < std::string > ())) }
+  case 14: // instr_arg: "$" "identifier"
+#line 80 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgImmed(yystack_[0].value.as < std::string > ())) }
 #line 642 "src/parser.cpp"
     break;
 
   case 15: // instr_arg: literal
-#line 72 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < ushort > ())) }
+#line 82 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < ushort > ())) }
 #line 648 "src/parser.cpp"
     break;
 
-  case 16: // instr_arg: IDENT
-#line 74 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < std::string > ())) }
+  case 16: // instr_arg: "identifier"
+#line 84 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < std::string > ())) }
 #line 654 "src/parser.cpp"
     break;
 
-  case 17: // instr_arg: PERCENT IDENT
-#line 76 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgPCRel(yystack_[0].value.as < std::string > ())) }
+  case 17: // instr_arg: "%" "identifier"
+#line 86 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgPCRel(yystack_[0].value.as < std::string > ())) }
 #line 660 "src/parser.cpp"
     break;
 
-  case 18: // instr_arg: REG
-#line 78 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgRegDir(yystack_[0].value.as < std::string > ())) }
+  case 18: // instr_arg: "register"
+#line 88 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgRegDir(yystack_[0].value.as < std::string > ())) }
 #line 666 "src/parser.cpp"
     break;
 
-  case 19: // instr_arg: SBR_OPEN REG SBR_CLOSE
-#line 80 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgRegInd(yystack_[1].value.as < std::string > ())) }
+  case 19: // instr_arg: "[" "register" "]"
+#line 90 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgRegInd(yystack_[1].value.as < std::string > ())) }
 #line 672 "src/parser.cpp"
     break;
 
-  case 20: // instr_arg: SBR_OPEN REG PLUS literal SBR_CLOSE
-#line 82 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < ushort > ())) }
+  case 20: // instr_arg: "[" "register" "+" literal "]"
+#line 92 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < ushort > ())) }
 #line 678 "src/parser.cpp"
     break;
 
-  case 21: // instr_arg: SBR_OPEN REG PLUS IDENT SBR_CLOSE
-#line 84 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > ())) }
+  case 21: // instr_arg: "[" "register" "+" "identifier" "]"
+#line 94 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > ())) }
 #line 684 "src/parser.cpp"
     break;
 
-  case 22: // instr_arg: MUL literal
-#line 86 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < ushort > (), true)) }
+  case 22: // instr_arg: "*" literal
+#line 96 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < ushort > (), true)) }
 #line 690 "src/parser.cpp"
     break;
 
-  case 23: // instr_arg: MUL IDENT
-#line 88 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < std::string > (), true)) }
+  case 23: // instr_arg: "*" "identifier"
+#line 98 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgMemDirOrJmpImmed(yystack_[0].value.as < std::string > (), true)) }
 #line 696 "src/parser.cpp"
     break;
 
-  case 24: // instr_arg: MUL REG
-#line 90 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgRegDir(yystack_[0].value.as < std::string > (), true)) }
+  case 24: // instr_arg: "*" "register"
+#line 100 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgRegDir(yystack_[0].value.as < std::string > (), true)) }
 #line 702 "src/parser.cpp"
     break;
 
-  case 25: // instr_arg: MUL SBR_OPEN REG SBR_CLOSE
-#line 92 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgRegInd(yystack_[1].value.as < std::string > (), true)) }
+  case 25: // instr_arg: "*" "[" "register" "]"
+#line 102 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgRegInd(yystack_[1].value.as < std::string > (), true)) }
 #line 708 "src/parser.cpp"
     break;
 
-  case 26: // instr_arg: MUL SBR_OPEN REG PLUS literal SBR_CLOSE
-#line 94 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < ushort > (), true)) }
+  case 26: // instr_arg: "*" "[" "register" "+" literal "]"
+#line 104 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < ushort > (), true)) }
 #line 714 "src/parser.cpp"
     break;
 
-  case 27: // instr_arg: MUL SBR_OPEN REG PLUS IDENT SBR_CLOSE
-#line 96 "parser.y"
-           { RET_ON_ERROR(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > (), true)) }
+  case 27: // instr_arg: "*" "[" "register" "+" "identifier" "]"
+#line 106 "parser.y"
+           { PARSER_CALLBACK(assembler.instrArgRegIndOff(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::string > (), true)) }
 #line 720 "src/parser.cpp"
     break;
 
-  case 28: // dir: PERIOD IDENT
-#line 98 "parser.y"
-                   { RET_ON_ERROR(assembler.dir(yystack_[0].value.as < std::string > ())) }
+  case 28: // dir: "." "identifier"
+#line 108 "parser.y"
+                   { PARSER_CALLBACK(assembler.dir(yystack_[0].value.as < std::string > ())) }
 #line 726 "src/parser.cpp"
     break;
 
-  case 29: // dir: PERIOD IDENT dir_arg_list
-#line 99 "parser.y"
-                                { RET_ON_ERROR(assembler.dir(yystack_[1].value.as < std::string > ())) }
+  case 29: // dir: "." "identifier" dir_arg_list
+#line 109 "parser.y"
+                                { PARSER_CALLBACK(assembler.dir(yystack_[1].value.as < std::string > ())) }
 #line 732 "src/parser.cpp"
     break;
 
-  case 32: // dir_arg: IDENT
-#line 104 "parser.y"
-               { RET_ON_ERROR(assembler.dirArg(yystack_[0].value.as < std::string > ())) }
+  case 32: // dir_arg: "identifier"
+#line 114 "parser.y"
+               { PARSER_CALLBACK(assembler.dirArg(yystack_[0].value.as < std::string > ())) }
 #line 738 "src/parser.cpp"
     break;
 
   case 33: // dir_arg: literal
-#line 105 "parser.y"
-                 { RET_ON_ERROR(assembler.dirArg(yystack_[0].value.as < ushort > ())) }
+#line 115 "parser.y"
+                 { PARSER_CALLBACK(assembler.dirArg(yystack_[0].value.as < ushort > ())) }
 #line 744 "src/parser.cpp"
     break;
 
-  case 34: // literal: INT_10
-#line 107 "parser.y"
+  case 34: // literal: "integer10"
+#line 117 "parser.y"
                 {
            uint lit = std::stoul(yystack_[0].value.as < std::string > (), nullptr, 10);
            if (lit > 0xFFFFul) {
@@ -756,8 +756,8 @@ namespace yy {
 #line 757 "src/parser.cpp"
     break;
 
-  case 35: // literal: INT_16
-#line 116 "parser.y"
+  case 35: // literal: "integer16"
+#line 126 "parser.y"
                 {
            uint lit = std::stoul(yystack_[0].value.as < std::string > (), nullptr, 16);
            if (lit > 0xFFFFul) {
@@ -769,9 +769,9 @@ namespace yy {
 #line 770 "src/parser.cpp"
     break;
 
-  case 36: // label: IDENT COLON
-#line 125 "parser.y"
-                   { RET_ON_ERROR(assembler.label(yystack_[1].value.as < std::string > ())); }
+  case 36: // label: "identifier" ":"
+#line 135 "parser.y"
+                   { PARSER_CALLBACK(assembler.label(yystack_[1].value.as < std::string > ())); }
 #line 776 "src/parser.cpp"
     break;
 
@@ -821,7 +821,7 @@ namespace yy {
            error, discard it.  */
 
         // Return failure if at end of input.
-        if (yyla.kind () == symbol_kind::TOKEN_YYEOF)
+        if (yyla.kind () == symbol_kind::S_YYEOF)
           YYABORT;
         else if (!yyla.empty ())
           {
@@ -862,9 +862,9 @@ namespace yy {
         yyn = yypact_[+yystack_[0].state];
         if (!yy_pact_value_is_default_ (yyn))
           {
-            yyn += symbol_kind::TOKEN_YYerror;
+            yyn += symbol_kind::S_YYerror;
             if (0 <= yyn && yyn <= yylast_
-                && yycheck_[yyn] == symbol_kind::TOKEN_YYerror)
+                && yycheck_[yyn] == symbol_kind::S_YYerror)
               {
                 yyn = yytable_[yyn];
                 if (0 < yyn)
@@ -955,18 +955,50 @@ namespace yy {
     error (yyexc.location, yyexc.what ());
   }
 
-  const char *
+  /* Return YYSTR after stripping away unnecessary quotes and
+     backslashes, so that it's suitable for yyerror.  The heuristic is
+     that double-quoting is unnecessary unless the string contains an
+     apostrophe, a comma, or backslash (other than backslash-backslash).
+     YYSTR is taken from yytname.  */
+  std::string
+  Parser::yytnamerr_ (const char *yystr)
+  {
+    if (*yystr == '"')
+      {
+        std::string yyr;
+        char const *yyp = yystr;
+
+        for (;;)
+          switch (*++yyp)
+            {
+            case '\'':
+            case ',':
+              goto do_not_strip_quotes;
+
+            case '\\':
+              if (*++yyp != '\\')
+                goto do_not_strip_quotes;
+              else
+                goto append;
+
+            append:
+            default:
+              yyr += *yyp;
+              break;
+
+            case '"':
+              return yyr;
+            }
+      do_not_strip_quotes: ;
+      }
+
+    return yystr;
+  }
+
+  std::string
   Parser::symbol_name (symbol_kind_type yysymbol)
   {
-    static const char *const yy_sname[] =
-    {
-    "end of file", "error", "invalid token", "IDENT", "INT_10", "INT_16",
-  "REG", "DOLLAR", "PERCENT", "COLON", "COMMA", "PERIOD", "PLUS", "MUL",
-  "SBR_OPEN", "SBR_CLOSE", "NEWLINE", "$accept", "program", "line",
-  "instr", "instr_arg", "dir", "dir_arg_list", "dir_arg", "literal",
-  "label", YY_NULLPTR
-    };
-    return yy_sname[yysymbol];
+    return yytnamerr_ (yytname_[yysymbol]);
   }
 
 
@@ -993,8 +1025,8 @@ namespace yy {
     for (int yyx = 0; yyx < YYNTOKENS; ++yyx)
       {
         symbol_kind_type yysym = YY_CAST (symbol_kind_type, yyx);
-        if (yysym != symbol_kind::TOKEN_YYerror
-            && yysym != symbol_kind::TOKEN_YYUNDEF
+        if (yysym != symbol_kind::S_YYerror
+            && yysym != symbol_kind::S_YYUNDEF
             && yyparser_.yy_lac_check_ (yysym))
           {
             if (!yyarg)
@@ -1006,9 +1038,11 @@ namespace yy {
           }
       }
     if (yyarg && yycount == 0 && 0 < yyargn)
-      yyarg[0] = symbol_kind::TOKEN_YYEMPTY;
+      yyarg[0] = symbol_kind::S_YYEMPTY;
     return yycount;
   }
+
+
 
 
   bool
@@ -1115,7 +1149,9 @@ namespace yy {
        follows.  If no initial context is currently established for the
        current lookahead, then check if that lookahead can eventually be
        shifted if syntactic actions continue from the current context.  */
-    if (!yy_lac_established_)
+    if (yy_lac_established_)
+      return true;
+    else
       {
 #if YYDEBUG
         YYCDEBUG << "LAC: initial context established for "
@@ -1124,12 +1160,11 @@ namespace yy {
         yy_lac_established_ = true;
         return yy_lac_check_ (yytoken);
       }
-    return true;
   }
 
   // Discard any previous initial lookahead context.
   void
-  Parser::yy_lac_discard_ (const char* evt)
+  Parser::yy_lac_discard_ (const char* event)
   {
    /* Discard any previous initial lookahead context because of Event,
       which may be a lookahead change or an invalidation of the currently
@@ -1145,10 +1180,11 @@ namespace yy {
     if (yy_lac_established_)
       {
         YYCDEBUG << "LAC: initial context discarded due to "
-                 << evt << '\n';
+                 << event << '\n';
         yy_lac_established_ = false;
       }
   }
+
 
   int
   Parser::yy_syntax_error_arguments_ (const context& yyctx,
@@ -1321,16 +1357,29 @@ namespace yy {
   };
 
 
+#if YYDEBUG || 1
+  // YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
+  // First, the terminals, then, starting at \a YYNTOKENS, nonterminals.
+  const char*
+  const Parser::yytname_[] =
+  {
+  "\"end of file\"", "error", "\"invalid token\"", "\"identifier\"",
+  "\"integer10\"", "\"integer16\"", "\"register\"", "\"$\"", "\"%\"",
+  "\":\"", "\",\"", "\".\"", "\"+\"", "\"*\"", "\"[\"", "\"]\"",
+  "\"newline\"", "$accept", "asm", "stmt", "instr", "instr_arg", "dir",
+  "dir_arg_list", "dir_arg", "literal", "label", YY_NULLPTR
+  };
+#endif
 
 
 #if YYDEBUG
-  const signed char
+  const unsigned char
   Parser::yyrline_[] =
   {
-       0,    53,    53,    54,    56,    57,    58,    59,    60,    61,
-      63,    64,    65,    67,    69,    71,    73,    75,    77,    79,
-      81,    83,    85,    87,    89,    91,    93,    95,    98,    99,
-     101,   102,   104,   105,   107,   116,   125
+       0,    63,    63,    64,    66,    67,    68,    69,    70,    71,
+      73,    74,    75,    77,    79,    81,    83,    85,    87,    89,
+      91,    93,    95,    97,    99,   101,   103,   105,   108,   109,
+     111,   112,   114,   115,   117,   126,   135
   };
 
   void
@@ -1363,9 +1412,9 @@ namespace yy {
 
 #line 34 "parser.y"
 } // yy
-#line 1367 "src/parser.cpp"
+#line 1416 "src/parser.cpp"
 
-#line 126 "parser.y"
+#line 136 "parser.y"
 
 
 #include <iostream>

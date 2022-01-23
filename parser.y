@@ -22,7 +22,7 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
     return lexer.get_token(assembler);
 }
 
-#define RET_ON_ERROR(X) { int r = X; if (r != AE_OK) return r; }
+#define PARSER_CALLBACK(X) { int r = X; if (r != AE_OK && r != AE_SYNTAX_NOSKIP) return r; }
 }
 
 %param {yy::Lexer& lexer}
@@ -39,12 +39,20 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
 %define parse.error verbose
 %define parse.lac full
 
-%token <std::string> IDENT
-%token <std::string> INT_10 INT_16
-%token <std::string> REG
-%token DOLLAR PERCENT COLON COMMA PERIOD PLUS MUL
-%token SBR_OPEN SBR_CLOSE
-%token NEWLINE
+%token <std::string> IDENT "identifier"
+%token <std::string> INT_10 "integer10"
+%token <std::string> INT_16 "integer16"
+%token <std::string> REG "register"
+%token DOLLAR "$"
+%token PERCENT "%"
+%token COLON ":"
+%token COMMA ","
+%token PERIOD "."
+%token PLUS "+"
+%token MUL "*"
+%token SBR_OPEN "["
+%token SBR_CLOSE "]"
+%token NEWLINE "newline"
 %token YYEOF 0 "end of file"
 %token YYUNDEF
 
@@ -52,59 +60,59 @@ yy::Parser::symbol_type yylex(yy::Lexer& lexer, Assembler& assembler)
 %type <ushort> literal
 
 %%
-program: line
-    |    program NEWLINE line
+asm:  stmt
+    | asm NEWLINE stmt
 
-line: %empty
+stmt: %empty
     | instr
     | dir
     | label
     | label instr
     | label dir
 
-instr: IDENT { RET_ON_ERROR(assembler.instr($1)) }
-    |  IDENT instr_arg { RET_ON_ERROR(assembler.instr($1)) }
-    |  IDENT instr_arg COMMA instr_arg { RET_ON_ERROR(assembler.instr($1)) }
+instr: IDENT { PARSER_CALLBACK(assembler.instr($1)) }
+    |  IDENT instr_arg { PARSER_CALLBACK(assembler.instr($1)) }
+    |  IDENT instr_arg COMMA instr_arg { PARSER_CALLBACK(assembler.instr($1)) }
 
 instr_arg: DOLLAR literal                          /* $<literal>           */
-           { RET_ON_ERROR(assembler.instrArgImmed($2)) }
+           { PARSER_CALLBACK(assembler.instrArgImmed($2)) }
     |      DOLLAR IDENT                            /* $<symbol>            */
-           { RET_ON_ERROR(assembler.instrArgImmed($2)) }
+           { PARSER_CALLBACK(assembler.instrArgImmed($2)) }
     |      literal                                 /* <literal>            */
-           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed($1)) }
+           { PARSER_CALLBACK(assembler.instrArgMemDirOrJmpImmed($1)) }
     |      IDENT                                   /* <symbol>             */
-           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed($1)) }
+           { PARSER_CALLBACK(assembler.instrArgMemDirOrJmpImmed($1)) }
     |      PERCENT IDENT                           /* %<symbol>            */
-           { RET_ON_ERROR(assembler.instrArgPCRel($2)) }
+           { PARSER_CALLBACK(assembler.instrArgPCRel($2)) }
     |      REG                                     /* <reg>                */
-           { RET_ON_ERROR(assembler.instrArgRegDir($1)) }
+           { PARSER_CALLBACK(assembler.instrArgRegDir($1)) }
     |      SBR_OPEN REG SBR_CLOSE                  /* [<reg>]              */
-           { RET_ON_ERROR(assembler.instrArgRegInd($2)) }
+           { PARSER_CALLBACK(assembler.instrArgRegInd($2)) }
     |      SBR_OPEN REG PLUS literal SBR_CLOSE     /* [<reg> + <literal>]  */
-           { RET_ON_ERROR(assembler.instrArgRegIndOff($2, $4)) }
+           { PARSER_CALLBACK(assembler.instrArgRegIndOff($2, $4)) }
     |      SBR_OPEN REG PLUS IDENT SBR_CLOSE       /* [<reg> + <symbol>]   */
-           { RET_ON_ERROR(assembler.instrArgRegIndOff($2, $4)) }
+           { PARSER_CALLBACK(assembler.instrArgRegIndOff($2, $4)) }
     |      MUL literal                             /* *<literal>           */
-           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed($2, true)) }
+           { PARSER_CALLBACK(assembler.instrArgMemDirOrJmpImmed($2, true)) }
     |      MUL IDENT                               /* *<symbol>            */
-           { RET_ON_ERROR(assembler.instrArgMemDirOrJmpImmed($2, true)) }
+           { PARSER_CALLBACK(assembler.instrArgMemDirOrJmpImmed($2, true)) }
     |      MUL REG                                 /* *<reg>               */
-           { RET_ON_ERROR(assembler.instrArgRegDir($2, true)) }
+           { PARSER_CALLBACK(assembler.instrArgRegDir($2, true)) }
     |      MUL SBR_OPEN REG SBR_CLOSE              /* *[<reg>]             */
-           { RET_ON_ERROR(assembler.instrArgRegInd($3, true)) }
+           { PARSER_CALLBACK(assembler.instrArgRegInd($3, true)) }
     |      MUL SBR_OPEN REG PLUS literal SBR_CLOSE /* *[<reg> + <literal>] */
-           { RET_ON_ERROR(assembler.instrArgRegIndOff($3, $5, true)) }
+           { PARSER_CALLBACK(assembler.instrArgRegIndOff($3, $5, true)) }
     |      MUL SBR_OPEN REG PLUS IDENT SBR_CLOSE   /* *[<reg> + <symbol>]  */
-           { RET_ON_ERROR(assembler.instrArgRegIndOff($3, $5, true)) }
+           { PARSER_CALLBACK(assembler.instrArgRegIndOff($3, $5, true)) }
 
-dir:  PERIOD IDENT { RET_ON_ERROR(assembler.dir($2)) }
-    | PERIOD IDENT dir_arg_list { RET_ON_ERROR(assembler.dir($2)) }
+dir:  PERIOD IDENT { PARSER_CALLBACK(assembler.dir($2)) }
+    | PERIOD IDENT dir_arg_list { PARSER_CALLBACK(assembler.dir($2)) }
 
 dir_arg_list: dir_arg
     | dir_arg_list COMMA dir_arg
 
-dir_arg: IDENT { RET_ON_ERROR(assembler.dirArg($1)) }
-    |    literal { RET_ON_ERROR(assembler.dirArg($1)) }
+dir_arg: IDENT { PARSER_CALLBACK(assembler.dirArg($1)) }
+    |    literal { PARSER_CALLBACK(assembler.dirArg($1)) }
 
 literal: INT_10 {
            uint lit = std::stoul($1, nullptr, 10);
@@ -124,7 +132,7 @@ literal: INT_10 {
            $$ = (ushort)lit;
          }
 
-label: IDENT COLON { RET_ON_ERROR(assembler.label($1)); }
+label: IDENT COLON { PARSER_CALLBACK(assembler.label($1)); }
 %%
 
 #include <iostream>

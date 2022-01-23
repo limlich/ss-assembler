@@ -24,6 +24,7 @@ namespace yy {
         Lexer(std::istream* in = (std::istream*)0) : yyFlexLexer(in) {}
         virtual ~Lexer() {}
         yy::Parser::symbol_type get_token(Assembler& assembler);
+        void skip_line(Assembler& assembler);
     };
 
 }
