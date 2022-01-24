@@ -37,6 +37,7 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
         instrNumArgs_ = 0;
         dirArgs_.clear();
         labeled_ = false;
+        pcRel_ = false;
         sectionName_ = "";
         relSectionName_ = "";
         section_ = nullptr;
@@ -55,6 +56,7 @@ int Assembler::run(const std::string& inFilename, const std::string& outFilename
                     instrNumArgs_ = 0;
                     dirArgs_.clear();
                     labeled_ = false;
+                    pcRel_ = false;
                     lexer_.skip_line(*this); // skip erroneous line
                 }
             }
