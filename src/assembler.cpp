@@ -739,7 +739,8 @@ void Assembler::initStrSection()
 {
     // Insert names section so access to it doesn't cause reallocation
     // of section map and invalidate section pointers
-    sections_[STR_SECTION] = Section(ST_STR);
+    Section &strSection = sections_[STR_SECTION] = Section(ST_STR);
+    strSection.data.push_back('\0');
 }
 
 std::size_t Assembler::insertStrSectionEntry(const std::string &str)
