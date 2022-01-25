@@ -59,7 +59,7 @@ struct SymbolEntry
 struct Symbol
 {
     Symbol() :
-        global(false), external(false), section(""), id(0)
+        global(false), external(false), used(false), section(""), id(0)
     {}
 
     bool defined() const { return entry.type != SYMT_UNDEF; }
@@ -68,6 +68,7 @@ struct Symbol
 
     bool global;
     bool external;
+    bool used;
     SymbolEntry entry;
     std::string section;
     uint id; // symbol table entry id

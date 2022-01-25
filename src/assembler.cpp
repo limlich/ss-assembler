@@ -600,13 +600,14 @@ int Assembler::processWord(string_ushort_variant &arg)
         value = *literal;
     else {
         const std::string &symbolName = std::get<std::string>(arg);
-        const Symbol &symbol = getSymbol(symbolName);
+        Symbol &symbol = getSymbol(symbolName);
         if (!symbol.defined() && !symbol.external) {
             error("undeclared symbol " + symbolName);
             return AE_SYNTAX_NOSKIP;
         }
 
         value = symbol.entry.value;
+        symbol.used = true;
 
         if (symbol.label()) {
             relEntry.symbolId = getSectionSymbol(symbol.section).id;
@@ -701,6 +702,8 @@ void Assembler::endSymbolTable()
         switch (symbol.entry.type) {
         case SYMT_UNDEF: // extern symbol
             if (symbol.external) {
+                if (!symbol.used)
+                    continue; // unused imported symbol - ignore
                 symbol.entry.bind = SYMB_GLOBAL;
                 symbol.global = false;
             } else
