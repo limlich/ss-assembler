@@ -804,8 +804,8 @@ void Assembler::endSection()
 void Assembler::insertSectionTableEntry(const std::string &sectionName, Section &section, ushort size)
 {
     section.id = sectionHeaderTable_.size();
-    section.entry.size = size ? size : section.data.size();
     section.entry.nameOffset = insertStrSectionEntry(sectionName);
+    section.entry.size = size ? size : section.data.size();
     sectionHeaderTable_.push_back(section.entry);
 }
 
