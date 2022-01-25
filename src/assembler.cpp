@@ -646,7 +646,7 @@ Symbol& Assembler::getSymbol(const std::string &symbolName)
 const Symbol& Assembler::getSectionSymbol(const std::string &sectionName)
 {
     Symbol &sectionSymbol = getSymbol(sectionName);
-    if (!sectionSymbol.section.empty()) {
+    if (sectionSymbol.id == ST_NONE) {
         // Add section symbol to the symbol table so it has an id
         // for relocation entries
         const Section &section = sections_[sectionName];
