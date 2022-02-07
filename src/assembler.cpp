@@ -170,8 +170,13 @@ int Assembler::instrFirstPass(const std::string& instrName)
             else
                 arg.addrMode = MEMDIR; // instr <lit/sym>
             arg.jmpSyntax = iInfo.jmpSyntax;
-        } else if (arg.addrMode == REGDIR_OFFSET) // instr %<symbol> | jmp %<symbol>
+        } else if (arg.addrMode == (REGIND_OFFSET | REGDIR_OFFSET) && pcRel_) { // instr %<symbol> | jmp %<symbol>
+            if (iInfo.jmpSyntax)
+                arg.addrMode = REGDIR_OFFSET; // jmp %<symbol>
+            else
+                arg.addrMode = REGIND_OFFSET; // instr %<symbol>
             arg.jmpSyntax = iInfo.jmpSyntax;
+        }
 
         if (iInfo.jmpSyntax != arg.jmpSyntax) {
             syntaxError(std::string("expected ") + (iInfo.jmpSyntax ? "jump" : "data")
@@ -234,6 +239,13 @@ int Assembler::instrSecondPass(const std::string& instrName)
             op->addrMode = IMMED; // jmp <lit/sym>
         else
             op->addrMode = MEMDIR; // instr <lit/sym>
+    }
+
+    if (op->addrMode == (REGIND_OFFSET | REGDIR_OFFSET) && pcRel_) { // pc rel
+        if (iInfo.jmpSyntax)
+            op->addrMode = REGDIR_OFFSET; // jmp %<symbol>
+        else
+            op->addrMode = REGIND_OFFSET; // instr %<symbol>
     }
 
     string_ushort_variant *payload = nullptr;
@@ -299,7 +311,7 @@ int Assembler::instrArgMemDirOrJmpImmed(string_ushort_variant arg, bool jmpSynta
 }
 int Assembler::instrArgPCRel(const std::string& sym)
 {
-    instrArgs_[instrNumArgs_].addrMode = REGDIR_OFFSET;
+    instrArgs_[instrNumArgs_].addrMode = REGIND_OFFSET | REGDIR_OFFSET;
     instrArgs_[instrNumArgs_].val = PC_REGISTER;
     instrArgs_[instrNumArgs_].off = sym;
     instrNumArgs_++;
@@ -820,7 +832,6 @@ void Assembler::writeSection(Section &section)
         (const char *)section.data.data(),
         section.entry.size
     );
-
 }
 
 void Assembler::syntaxError(const std::string& msg)
