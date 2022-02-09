@@ -515,6 +515,7 @@ int Assembler::dirFirstPass(const std::string& dirName)
 
     case END:
         endSection();
+        fillSymbolTable();
         return AE_END;
     }
 
@@ -702,7 +703,7 @@ void Assembler::insertSymbolTableEntry(Symbol &symbol)
     symTabSection.data.insert(symTabSection.data.end(), entryBegin, entryEnd);
 }
 
-void Assembler::endSymbolTable()
+void Assembler::fillSymbolTable()
 {
     Section &symTabSection = sections_[SYM_TAB_SECTION];
     symTabSection.data.reserve(symbols_.size());
@@ -734,6 +735,22 @@ void Assembler::endSymbolTable()
 
         symbol.entry.nameOffset = insertStrSectionEntry(symbolName);
         insertSymbolTableEntry(symbol);
+    }
+}
+
+void Assembler::endSymbolTable()
+{
+    Section &symTabSection = sections_[SYM_TAB_SECTION];
+    SymbolEntry* symTab = (SymbolEntry*)symTabSection.data.cbegin().base();
+
+    for (auto& [symbolName, symbol] : symbols_) {
+        if (symbol.entry.type == SYMT_SECTION) 
+            continue;
+
+        if (symbol.id == 0) // ignored symbols
+            continue;
+        
+        symTab[symbol.id] = symbol.entry;
     }
 
     insertSectionTableEntry(SYM_TAB_SECTION, symTabSection);

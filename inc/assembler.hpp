@@ -72,6 +72,7 @@ private:
 
     void initSymbolTable();
     void insertSymbolTableEntry(Symbol &symbol);
+    void fillSymbolTable();
     void endSymbolTable();
 
     void initStrSection();
