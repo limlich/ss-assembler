@@ -190,13 +190,31 @@ int Assembler::instrFirstPass(const std::string& instrName)
             return AE_SYNTAX_NOSKIP;
         }
 
+        string_ushort_variant *payload = nullptr;
+
         switch(arg.addrMode) {
         case IMMED:
+            lc_ += 2; // DataHigh + DataLow
+            payload = &arg.val;
+            break;
         case MEMDIR:
+            lc_ += 2; // DataHigh + DataLow
+            payload = &arg.val;
+            break;
         case REGDIR_OFFSET:
+            lc_ += 2; // DataHigh + DataLow
+            payload = &arg.off;
+            break;
         case REGIND_OFFSET:
             lc_ += 2; // DataHigh + DataLow
+            payload = &arg.off;
             break;
+        }
+
+        if (payload) {
+            std::string* symbolName = std::get_if<std::string>(payload);
+            if (symbolName)
+                getSymbol(*symbolName).used = true;
         }
     }
 
@@ -492,6 +510,12 @@ int Assembler::dirFirstPass(const std::string& dirName)
 
     case WORD:
         lc_ += dirArgs_.size() * 2;
+        for (uint i = 0; i < dirArgs_.size(); ++i) {
+            std::string* symbolName = std::get_if<std::string>(&dirArgs_[i]);
+            if (symbolName)
+                getSymbol(*symbolName).used = true;
+        }
+
         break;
 
     case SKIP:
@@ -620,7 +644,6 @@ int Assembler::processWord(string_ushort_variant &arg)
         }
 
         value = symbol.entry.value;
-        symbol.used = true;
 
         if (symbol.label()) {
             relEntry.symbolId = getSectionSymbol(symbol.section).id;
@@ -651,7 +674,6 @@ Symbol& Assembler::getSymbol(const std::string &symbolName)
 
     // new symbol
     Symbol &symbol = symbols_[symbolName];
-    symbol.section = sectionName_;
 
     return symbol;
 }
@@ -659,7 +681,7 @@ Symbol& Assembler::getSymbol(const std::string &symbolName)
 const Symbol& Assembler::getSectionSymbol(const std::string &sectionName)
 {
     Symbol &sectionSymbol = getSymbol(sectionName);
-    if (sectionSymbol.id == ST_NONE) {
+    if (sectionSymbol.entry.type == SYMT_UNDEF) {
         // Add section symbol to the symbol table so it has an id
         // for relocation entries
         const Section &section = sections_[sectionName];
@@ -691,7 +713,7 @@ void Assembler::initSymbolTable()
     Symbol invalidSymbol;
     insertSymbolTableEntry(invalidSymbol);
 }
-   
+
 void Assembler::insertSymbolTableEntry(Symbol &symbol)
 {
     Section &symTabSection = sections_[SYM_TAB_SECTION];
@@ -709,7 +731,7 @@ void Assembler::fillSymbolTable()
     symTabSection.data.reserve(symbols_.size());
 
     for (auto& [symbolName, symbol] : symbols_) {
-        if (symbol.entry.type == SYMT_SECTION) 
+        if (symbol.entry.type == SYMT_SECTION)
             continue;
 
         switch (symbol.entry.type) {
@@ -744,12 +766,12 @@ void Assembler::endSymbolTable()
     SymbolEntry* symTab = (SymbolEntry*)symTabSection.data.cbegin().base();
 
     for (auto& [symbolName, symbol] : symbols_) {
-        if (symbol.entry.type == SYMT_SECTION) 
+        if (symbol.entry.type == SYMT_SECTION)
             continue;
 
         if (symbol.id == 0) // ignored symbols
             continue;
-        
+
         symTab[symbol.id] = symbol.entry;
     }
 
