@@ -3,3 +3,6 @@
 /TODO
 *.pdf
 *.o
+/tests/*
+!/tests/interrupts.s
+!/tests/main.s
