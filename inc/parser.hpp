@@ -45,7 +45,7 @@
 #ifndef YY_YY_INC_PARSER_HPP_INCLUDED
 # define YY_YY_INC_PARSER_HPP_INCLUDED
 // "%code requires" blocks.
-#line 5 "parser.y"
+#line 5 "src/parser.y"
 
 #include <string>
 #include "types.hpp"
@@ -189,7 +189,7 @@ class Assembler;
 # define YYDEBUG 0
 #endif
 
-#line 34 "parser.y"
+#line 34 "src/parser.y"
 namespace yy {
 #line 195 "inc/parser.hpp"
 
@@ -1586,7 +1586,7 @@ switch (yykind)
   }
 
 
-#line 34 "parser.y"
+#line 34 "src/parser.y"
 } // yy
 #line 1592 "inc/parser.hpp"
 

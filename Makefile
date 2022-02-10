@@ -4,13 +4,13 @@ BUILD_DIR := build
 SRC_DIR := src
 INC_DIR := inc
 
-PARSER_Y := parser.y
+PARSER_Y := $(SRC_DIR)/parser.y
 PARSER_H := $(INC_DIR)/parser.hpp
 PARSER_LOC_H := $(INC_DIR)/location.hpp
 PARSER_SRC := $(SRC_DIR)/parser.cpp
 PARSER_OBJ := $(PARSER_SRC:%=$(BUILD_DIR)/%.o)
 
-LEXER_L := lexer.l
+LEXER_L := $(SRC_DIR)/lexer.l
 LEXER_SRC := $(SRC_DIR)/lexer.cpp
 LEXER_OBJ := $(LEXER_SRC:%=$(BUILD_DIR)/%.o)
 
