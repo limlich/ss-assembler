@@ -13,11 +13,13 @@
 
 void yy::Lexer::skip_line(Assembler& assembler)
 {
-    yy::Parser::symbol_kind_type symKind;
+    static int NEWLINE = yy::Parser::make_NEWLINE(assembler.getLocation()).type_get();
+    static int YYEOF = yy::Parser::make_YYEOF(assembler.getLocation()).type_get();
+    int tokenType;
     do {
-        symKind = get_token(assembler).kind();
-    } while (symKind != yy::Parser::symbol_kind_type::S_NEWLINE &&
-             symKind != yy::Parser::symbol_kind_type::S_YYEOF);
+        tokenType = get_token(assembler).type_get();
+    } while (tokenType != NEWLINE &&
+             tokenType != YYEOF);
 }
 
 %}
