@@ -64,7 +64,7 @@ private:
     Symbol& getSymbol(const std::string &symbolName);
     const Symbol& getSectionSymbol(const std::string &sectionName);
 
-    int processWord(string_ushort_variant &arg);
+    int processWord(string_ushort_variant &arg, bool instr);
 
     void writeObjHeader();
 

@@ -302,7 +302,7 @@ int Assembler::instrSecondPass(const std::string& instrName)
 
     // dataHigh + dataLow
     if (payload) {
-        int res = processWord(*payload);
+        int res = processWord(*payload, true);
         if (res != AE_OK)
             return res;
     }
@@ -573,7 +573,7 @@ int Assembler::dirSecondPass(const std::string& dirName)
 
     case WORD:
         for (uint i = 0; i < dirArgs_.size(); ++i) {
-            int res = processWord(dirArgs_[i]);
+            int res = processWord(dirArgs_[i], false);
             if (res != AE_OK)
                 return res;
         }
@@ -624,13 +624,13 @@ int Assembler::label(const std::string& label)
     return AE_OK;
 }
 
-int Assembler::processWord(string_ushort_variant &arg)
+int Assembler::processWord(string_ushort_variant &arg, bool instr)
 {
     ushort value;
     ushort *literal = std::get_if<ushort>(&arg);
 
     // Relocation entry for labels, external symbols or PC relative addressing
-    RelEntry relEntry(pcRel_ ? RT_PC : RT_SYM_16, section_->data.size(), 0);
+    RelEntry relEntry(pcRel_ ? RT_PC : (instr ? RT_SYM_16_BE : RT_SYM_16), section_->data.size(), 0);
     bool rel = pcRel_;
 
     if (literal)
@@ -660,8 +660,13 @@ int Assembler::processWord(string_ushort_variant &arg)
         relSection_->data.insert(relSection_->data.end(), relBegin, relEnd);
     }
 
-    section_->data.push_back(value);
-    section_->data.push_back(value >> 8);
+    if (instr) {
+        section_->data.push_back(value >> 8); // DataHigh
+        section_->data.push_back(value); // DataLow
+    } else {
+        section_->data.push_back(value); // DataLow
+        section_->data.push_back(value >> 8); // DataHigh
+    }
 
     return AE_OK;
 }

@@ -11,7 +11,8 @@ class Symbol;
 
 enum RelType: ubyte
 {
-    RT_SYM_16,
+    RT_SYM_16, // little endian
+    RT_SYM_16_BE, // big endian - for instructions
     RT_PC
 };
 
