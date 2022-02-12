@@ -6,3 +6,7 @@
 /tests/*
 !/tests/interrupts.s
 !/tests/main.s
+/inc/parser.hpp
+/inc/location.hpp
+/src/parser.cpp
+/src/lexer.cpp
